@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Edit } from "lucide-react"
 import type { Expense } from "../types/expense"
-import { mockCategories } from "../data/mock-data"
+import { defaultCategories } from "../data/default-data"
 import { formatCurrency } from "../data/currency-data"
 import type { Wallet } from "../types/wallet"
 
@@ -139,7 +139,7 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {mockCategories.map((category) => (
+                {defaultCategories.map((category) => (
                   <SelectItem key={category.id} value={category.name}>
                     <div className="flex items-center gap-2">
                       <span>{category.icon}</span>

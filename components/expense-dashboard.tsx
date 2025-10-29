@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Expense } from "../types/expense"
-import { mockCategories } from "../data/mock-data"
+import { defaultCategories } from "../data/default-data"
 import { DownloadButton } from "./download-button"
 import { CurrencyConverter } from "./currency-converter"
 import { formatCurrency, convertCurrency } from "../data/currency-data"
@@ -39,7 +39,7 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
 
     const totalExpenses = Object.values(totals).reduce((sum, amount) => sum + amount, 0)
 
-    return mockCategories
+    return defaultCategories
       .map((category) => ({
         ...category,
         total: totals[category.name] || 0,
@@ -49,7 +49,6 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
       .sort((a, b) => b.total - a.total)
   }, [expenses])
 
-  // Convert all expenses to USD for unified total
   const totalInUSD = useMemo(() => {
     return expenses.reduce((sum, expense) => {
       return sum + convertCurrency(expense.amount, expense.currency, "USD")

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search, Trash2 } from "lucide-react"
 import type { Expense } from "../types/expense"
-import { mockCategories } from "../data/mock-data"
+import { defaultCategories } from "../data/default-data"
 import { ExpenseForm } from "./expense-form"
 import { DownloadButton } from "./download-button"
 import { formatCurrency } from "../data/currency-data"
@@ -17,7 +17,7 @@ import type { Wallet } from "../types/wallet"
 
 interface ExpenseListProps {
   expenses: Expense[]
-  wallets: Wallet[] // Add wallets prop
+  wallets: Wallet[]
   onUpdateExpense: (id: string, expense: Omit<Expense, "id">) => void
   onDeleteExpense: (id: string) => void
 }
@@ -38,12 +38,12 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
   })
 
   const getCategoryIcon = (categoryName: string) => {
-    const category = mockCategories.find((cat) => cat.name === categoryName)
+    const category = defaultCategories.find((cat) => cat.name === categoryName)
     return category?.icon || "💰"
   }
 
   const getCategoryColor = (categoryName: string) => {
-    const category = mockCategories.find((cat) => cat.name === categoryName)
+    const category = defaultCategories.find((cat) => cat.name === categoryName)
     return category?.color || "#6b7280"
   }
 
@@ -77,7 +77,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {mockCategories.map((category) => (
+              {defaultCategories.map((category) => (
                 <SelectItem key={category.id} value={category.name}>
                   {category.icon} {category.name}
                 </SelectItem>

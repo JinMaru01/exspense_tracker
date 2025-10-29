@@ -1,6 +1,4 @@
 "use client"
-
-import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Expense, Wallet } from "./types/expense"
 import { ExpenseForm } from "./components/expense-form"
@@ -8,98 +6,20 @@ import { ExpenseDashboard } from "./components/expense-dashboard"
 import { ExpenseList } from "./components/expense-list"
 import { ExportSummary } from "./components/export-summary"
 import { WalletManager } from "./components/wallet-manager"
-
-// Mock initial wallet data
-const initialWallets: Wallet[] = [
-  {
-    id: "1",
-    name: "Cash (Riel)",
-    balance: 6150000,
-    currency: "KHR",
-    exchangeRate: 4100,
-  },
-  {
-    id: "2",
-    name: "Cash (Dollar)",
-    balance: 500,
-    currency: "USD",
-    exchangeRate: 1,
-  },
-  {
-    id: "3",
-    name: "ABA Bank (USD)",
-    balance: 2500,
-    currency: "USD",
-    exchangeRate: 1,
-  },
-  {
-    id: "4",
-    name: "ACLEDA Bank (KHR)",
-    balance: 12300000,
-    currency: "KHR",
-    exchangeRate: 4100,
-  },
-  {
-    id: "5",
-    name: "Credit Card (USD)",
-    balance: 1800,
-    currency: "USD",
-    exchangeRate: 1,
-  },
-]
-
-// Mock initial data
-const initialExpenses: Expense[] = [
-  {
-    id: "1",
-    amount: 45.5,
-    category: "Food & Dining",
-    wallet: "Cash (Dollar)",
-    description: "Lunch at Italian restaurant",
-    date: new Date("2024-01-15"),
-    currency: "USD",
-  },
-  {
-    id: "2",
-    amount: 492000,
-    category: "Transportation",
-    wallet: "Cash (Riel)",
-    description: "Gas for car",
-    date: new Date("2024-01-14"),
-    currency: "KHR",
-  },
-  {
-    id: "3",
-    amount: 89.99,
-    category: "Shopping",
-    wallet: "Credit Card (USD)",
-    description: "New shoes",
-    date: new Date("2024-01-13"),
-    currency: "USD",
-  },
-  {
-    id: "4",
-    amount: 102500,
-    category: "Entertainment",
-    wallet: "ACLEDA Bank (KHR)",
-    description: "Movie tickets",
-    date: new Date("2024-01-12"),
-    currency: "KHR",
-  },
-  {
-    id: "5",
-    amount: 150.0,
-    category: "Bills & Utilities",
-    wallet: "ABA Bank (USD)",
-    description: "Electricity bill",
-    date: new Date("2024-01-11"),
-    currency: "USD",
-  },
-]
+import { useLocalStorage } from "./hooks/use-local-storage"
+import { defaultWallets } from "./data/default-data"
 
 export default function ExpenseTracker() {
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
-  const [wallets, setWallets] = useState<Wallet[]>(initialWallets)
+  const [expenses, setExpenses, expensesLoaded] = useLocalStorage<Expense[]>("expenses", [])
+  const [wallets, setWallets, walletsLoaded] = useLocalStorage<Wallet[]>("wallets", defaultWallets)
+
+  if (!expensesLoaded || !walletsLoaded) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
 
   const addExpense = (expenseData: Omit<Expense, "id">) => {
     const newExpense: Expense = {
