@@ -6,6 +6,7 @@ import { ExpenseDashboard } from "./components/expense-dashboard"
 import { ExpenseList } from "./components/expense-list"
 import { ExportSummary } from "./components/export-summary"
 import { WalletManager } from "./components/wallet-manager"
+import { WalletTransfer } from "./components/wallet-transfer"
 import { useLocalStorage } from "./hooks/use-local-storage"
 import { defaultWallets } from "./data/default-data"
 
@@ -83,6 +84,47 @@ export default function ExpenseTracker() {
     }
   }
 
+  const handleWalletTransfer = (
+    fromWalletId: string,
+    toWalletId: string,
+    amount: number,
+    convertedAmount: number,
+    note: string,
+  ) => {
+    const fromWallet = wallets.find((w) => w.id === fromWalletId)
+    const toWallet = wallets.find((w) => w.id === toWalletId)
+
+    if (!fromWallet || !toWallet) return
+
+    // Update wallet balances
+    setWallets((prev) =>
+      prev.map((wallet) => {
+        if (wallet.id === fromWalletId) {
+          return { ...wallet, balance: wallet.balance - amount }
+        }
+        if (wallet.id === toWalletId) {
+          return { ...wallet, balance: wallet.balance + convertedAmount }
+        }
+        return wallet
+      }),
+    )
+
+    // Create transfer record as expense
+    const transferExpense: Expense = {
+      id: `transfer_${Date.now()}`,
+      amount: amount,
+      category: "Transfer",
+      wallet: fromWallet.name,
+      description:
+        note ||
+        `Transfer to ${toWallet.name}${fromWallet.currency !== toWallet.currency ? ` (${convertedAmount.toFixed(2)} ${toWallet.currency})` : ""}`,
+      date: new Date(),
+      currency: fromWallet.currency,
+    }
+
+    setExpenses((prev) => [transferExpense, ...prev])
+  }
+
   return (
     <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -96,7 +138,7 @@ export default function ExpenseTracker() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-4 sm:space-y-6">
-        <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-5 h-auto">
           <TabsTrigger value="dashboard" className="text-xs sm:text-sm">
             Dashboard
           </TabsTrigger>
@@ -105,6 +147,9 @@ export default function ExpenseTracker() {
           </TabsTrigger>
           <TabsTrigger value="wallets" className="text-xs sm:text-sm">
             Wallets
+          </TabsTrigger>
+          <TabsTrigger value="transfer" className="text-xs sm:text-sm">
+            Transfer
           </TabsTrigger>
           <TabsTrigger value="export" className="text-xs sm:text-sm">
             Export
@@ -132,6 +177,10 @@ export default function ExpenseTracker() {
             onUpdateWallet={updateWallet}
             onDeleteWallet={deleteWallet}
           />
+        </TabsContent>
+
+        <TabsContent value="transfer" className="space-y-6">
+          <WalletTransfer wallets={wallets} onTransfer={handleWalletTransfer} />
         </TabsContent>
 
         <TabsContent value="export" className="space-y-6">

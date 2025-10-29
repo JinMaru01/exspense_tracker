@@ -11,4 +11,7 @@ export const defaultCategories: Category[] = [
   { id: "6", name: "Healthcare", color: "#ec4899", icon: "🏥" },
   { id: "7", name: "Education", color: "#06b6d4", icon: "📚" },
   { id: "8", name: "Travel", color: "#84cc16", icon: "✈️" },
+  { id: "9", name: "Transfer", color: "#6366f1", icon: "💸" },
+  { id: "10", name: "Income/Deposit", color: "#22c55e", icon: "💰" },
+  { id: "11", name: "Fees/Withdrawal", color: "#ef4444", icon: "🏧" },
 ]
