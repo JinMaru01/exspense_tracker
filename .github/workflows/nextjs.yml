@@ -21,11 +21,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Install pnpm before setup-node (important)
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9 # or your pnpm version
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -51,9 +50,6 @@ jobs:
 
       - name: Build Next.js
         run: pnpm next build
-
-      - name: Export static files
-        run: pnpm next export
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
