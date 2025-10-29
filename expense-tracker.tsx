@@ -2,6 +2,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Expense, Wallet } from "./types/expense"
 import { ExpenseForm } from "./components/expense-form"
+import { IncomeForm } from "./components/income-form"
 import { ExpenseDashboard } from "./components/expense-dashboard"
 import { ExpenseList } from "./components/expense-list"
 import { ExportSummary } from "./components/export-summary"
@@ -28,6 +29,34 @@ export default function ExpenseTracker() {
       id: Date.now().toString(),
     }
     setExpenses((prev) => [newExpense, ...prev])
+  }
+
+  const addIncome = (walletId: string, amount: number, description: string, category: string) => {
+    const wallet = wallets.find((w) => w.id === walletId)
+    if (!wallet) return
+
+    // Update wallet balance
+    setWallets((prev) =>
+      prev.map((w) => {
+        if (w.id === walletId) {
+          return { ...w, balance: w.balance + amount }
+        }
+        return w
+      }),
+    )
+
+    // Create income record as negative expense (income)
+    const incomeRecord: Expense = {
+      id: `income_${Date.now()}`,
+      amount: -amount, // Negative amount to indicate income
+      category: category,
+      wallet: wallet.name,
+      description: description || "Income",
+      date: new Date(),
+      currency: wallet.currency,
+    }
+
+    setExpenses((prev) => [incomeRecord, ...prev])
   }
 
   const updateExpense = (id: string, expenseData: Omit<Expense, "id">) => {
@@ -134,7 +163,10 @@ export default function ExpenseTracker() {
             Track and manage your expenses across different categories and wallets
           </p>
         </div>
-        <ExpenseForm wallets={wallets} onSubmit={addExpense} />
+        <div className="flex gap-2">
+          <IncomeForm wallets={wallets} onSubmit={addIncome} />
+          <ExpenseForm wallets={wallets} onSubmit={addExpense} />
+        </div>
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-4 sm:space-y-6">
