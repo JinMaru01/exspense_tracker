@@ -8,12 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search, Trash2 } from "lucide-react"
-import type { Expense } from "../types/expense"
+import type { Expense, Wallet } from "../types/expense"
 import { defaultCategories } from "../data/default-data"
 import { ExpenseForm } from "./expense-form"
 import { DownloadButton } from "./download-button"
 import { formatCurrency } from "../data/currency-data"
-import type { Wallet } from "../types/wallet"
 
 interface ExpenseListProps {
   expenses: Expense[]
@@ -50,8 +49,8 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>Recent Expenses</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <CardTitle className="text-lg sm:text-xl">Recent Expenses</CardTitle>
           <DownloadButton
             expenses={expenses}
             filteredExpenses={filteredExpenses}
@@ -61,7 +60,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
             showFilteredOption={true}
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4 pt-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -71,44 +70,47 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
               className="pl-10"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {defaultCategories.map((category) => (
-                <SelectItem key={category.id} value={category.name}>
-                  {category.icon} {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={walletFilter} onValueChange={setWalletFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by wallet" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Wallets</SelectItem>
-              <SelectItem value="Cash">Cash</SelectItem>
-              <SelectItem value="Credit Card">Credit Card</SelectItem>
-              <SelectItem value="Savings Account">Savings Account</SelectItem>
-              <SelectItem value="Checking Account">Checking Account</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {defaultCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.icon} {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={walletFilter} onValueChange={setWalletFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by wallet" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Wallets</SelectItem>
+                {wallets.map((wallet) => (
+                  <SelectItem key={wallet.id} value={wallet.name}>
+                    {wallet.name} ({wallet.type})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Wallet</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="min-w-[100px]">Date</TableHead>
+                <TableHead className="min-w-[120px]">Category</TableHead>
+                <TableHead className="min-w-[150px]">Description</TableHead>
+                <TableHead className="min-w-[100px]">Wallet</TableHead>
+                <TableHead className="text-right min-w-[100px]">Amount</TableHead>
+                <TableHead className="text-right min-w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -121,10 +123,11 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
               ) : (
                 filteredExpenses.map((expense) => (
                   <TableRow key={expense.id}>
-                    <TableCell>{expense.date.toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs sm:text-sm">{expense.date.toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"
+                        className="text-xs whitespace-nowrap"
                         style={{
                           backgroundColor: `${getCategoryColor(expense.category)}20`,
                           color: getCategoryColor(expense.category),
@@ -134,17 +137,19 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
                         {getCategoryIcon(expense.category)} {expense.category}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate">{expense.description || "No description"}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-xs sm:text-sm">
+                      {expense.description || "No description"}
+                    </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="text-xs whitespace-nowrap">
                         {expense.wallet} ({expense.currency})
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className="text-right font-medium text-xs sm:text-sm">
                       {formatCurrency(expense.amount, expense.currency)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1 sm:gap-2">
                         <ExpenseForm
                           expense={expense}
                           wallets={wallets}
@@ -154,7 +159,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
                           variant="ghost"
                           size="sm"
                           onClick={() => onDeleteExpense(expense.id)}
-                          className="text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-8 w-8 p-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

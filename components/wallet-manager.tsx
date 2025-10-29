@@ -60,45 +60,45 @@ export function WalletManager({ wallets, expenses, onAddWallet, onUpdateWallet, 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Portfolio Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Wallets</CardTitle>
-            <Trash2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Wallets</CardTitle>
+            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{wallets.length}</div>
+            <div className="text-xl sm:text-2xl font-bold">{wallets.length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Portfolio Value</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalPortfolioUSD, "USD")}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalPortfolioUSD, "USD")}</div>
             <p className="text-xs text-muted-foreground">Current balance across all wallets</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">USD Wallets</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">USD Wallets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{wallets.filter((w) => w.currency === "USD").length}</div>
+            <div className="text-xl sm:text-2xl font-bold">{wallets.filter((w) => w.currency === "USD").length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">KHR Wallets</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">KHR Wallets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{wallets.filter((w) => w.currency === "KHR").length}</div>
+            <div className="text-xl sm:text-2xl font-bold">{wallets.filter((w) => w.currency === "KHR").length}</div>
           </CardContent>
         </Card>
       </div>
@@ -106,29 +106,30 @@ export function WalletManager({ wallets, expenses, onAddWallet, onUpdateWallet, 
       {/* Wallet Management */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Manage Wallets</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <CardTitle className="text-lg sm:text-xl">Manage Wallets</CardTitle>
             <WalletForm onSubmit={onAddWallet} />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Wallet Name</TableHead>
-                  <TableHead>Currency</TableHead>
-                  <TableHead className="text-right">Initial Balance</TableHead>
-                  <TableHead className="text-right">Total Spent</TableHead>
-                  <TableHead className="text-right">Current Balance</TableHead>
-                  <TableHead className="text-center">Transactions</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="min-w-[120px]">Wallet Name</TableHead>
+                  <TableHead className="min-w-[100px]">Type</TableHead>
+                  <TableHead className="min-w-[80px]">Currency</TableHead>
+                  <TableHead className="text-right min-w-[100px]">Initial Balance</TableHead>
+                  <TableHead className="text-right min-w-[100px]">Total Spent</TableHead>
+                  <TableHead className="text-right min-w-[120px]">Current Balance</TableHead>
+                  <TableHead className="text-center min-w-[100px]">Transactions</TableHead>
+                  <TableHead className="text-right min-w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {wallets.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground text-sm">
                       No wallets found. Create your first wallet to get started.
                     </TableCell>
                   </TableRow>
@@ -141,17 +142,24 @@ export function WalletManager({ wallets, expenses, onAddWallet, onUpdateWallet, 
                       <TableRow key={wallet.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            {wallet.name}
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                            <span className="text-xs sm:text-sm">{wallet.name}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{wallet.currency}</Badge>
+                          <Badge variant="secondary" className="text-xs capitalize">
+                            {wallet.type}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {wallet.currency}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">
                           {formatCurrency(stats.initialBalance, wallet.currency)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right text-xs sm:text-sm">
                           {stats.totalSpent > 0 ? (
                             <span className="text-red-600">-{formatCurrency(stats.totalSpent, wallet.currency)}</span>
                           ) : (
@@ -161,20 +169,24 @@ export function WalletManager({ wallets, expenses, onAddWallet, onUpdateWallet, 
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             {isNegative ? (
-                              <TrendingDown className="h-4 w-4 text-red-500" />
+                              <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
                             ) : (
-                              <TrendingUp className="h-4 w-4 text-green-500" />
+                              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                             )}
-                            <span className={isNegative ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
+                            <span
+                              className={`text-xs sm:text-sm ${isNegative ? "text-red-600 font-medium" : "text-green-600 font-medium"}`}
+                            >
                               {formatCurrency(Math.abs(stats.currentBalance), wallet.currency)}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="secondary">{stats.transactionCount}</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {stats.transactionCount}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1 sm:gap-2">
                             <WalletForm
                               wallet={wallet}
                               onSubmit={(updatedWallet) => onUpdateWallet(wallet.id, updatedWallet)}
@@ -185,7 +197,7 @@ export function WalletManager({ wallets, expenses, onAddWallet, onUpdateWallet, 
                                   variant="ghost"
                                   size="sm"
                                   disabled={!canDeleteWallet(wallet.id)}
-                                  className="text-destructive hover:text-destructive"
+                                  className="text-destructive hover:text-destructive h-8 w-8 p-0"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

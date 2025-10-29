@@ -56,14 +56,14 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
   }, [expenses])
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total (USD Equivalent)</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Total (USD Equivalent)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalInUSD, "USD")}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalInUSD, "USD")}</div>
             <p className="text-xs text-muted-foreground">Across all currencies</p>
           </CardContent>
         </Card>
@@ -71,10 +71,10 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
         {Object.entries(currencyTotals).map(([currency, total]) => (
           <Card key={currency}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total in {currency}</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium">Total in {currency}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(total, currency)}</div>
+              <div className="text-xl sm:text-2xl font-bold">{formatCurrency(total, currency)}</div>
               <p className="text-xs text-muted-foreground">
                 ≈{" "}
                 {formatCurrency(
@@ -86,33 +86,37 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
           </Card>
         ))}
 
-        <div className="flex justify-end">
+        <div className="flex justify-end col-span-1 sm:col-span-2 lg:col-span-1">
           <DownloadButton expenses={expenses} />
         </div>
       </div>
 
       <Tabs defaultValue="categories" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="categories">By Categories</TabsTrigger>
-          <TabsTrigger value="converter">Currency Converter</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="categories" className="flex-1 sm:flex-none text-xs sm:text-sm">
+            By Categories
+          </TabsTrigger>
+          <TabsTrigger value="converter" className="flex-1 sm:flex-none text-xs sm:text-sm">
+            Currency Converter
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {categoryTotals.map((category) => (
               <Card key={category.id}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
+                  <CardTitle className="text-xs sm:text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      <span>{category.icon}</span>
-                      {category.name}
+                      <span className="text-base sm:text-lg">{category.icon}</span>
+                      <span className="truncate">{category.name}</span>
                     </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(category.total, "USD")}</div>
+                  <div className="text-xl sm:text-2xl font-bold">{formatCurrency(category.total, "USD")}</div>
                   <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground">{category.percentage.toFixed(1)}% of total</span>
                     </div>
                     <Progress

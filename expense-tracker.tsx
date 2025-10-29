@@ -15,7 +15,7 @@ export default function ExpenseTracker() {
 
   if (!expensesLoaded || !walletsLoaded) {
     return (
-      <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
+      <div className="container mx-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     )
@@ -84,23 +84,31 @@ export default function ExpenseTracker() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Expense Tracker</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Expense Tracker</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Track and manage your expenses across different categories and wallets
           </p>
         </div>
         <ExpenseForm wallets={wallets} onSubmit={addExpense} />
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="expenses">Expenses</TabsTrigger>
-          <TabsTrigger value="wallets">Wallets</TabsTrigger>
-          <TabsTrigger value="export">Export</TabsTrigger>
+      <Tabs defaultValue="dashboard" className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-4 h-auto">
+          <TabsTrigger value="dashboard" className="text-xs sm:text-sm">
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="expenses" className="text-xs sm:text-sm">
+            Expenses
+          </TabsTrigger>
+          <TabsTrigger value="wallets" className="text-xs sm:text-sm">
+            Wallets
+          </TabsTrigger>
+          <TabsTrigger value="export" className="text-xs sm:text-sm">
+            Export
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">

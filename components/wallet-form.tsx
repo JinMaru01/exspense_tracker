@@ -12,6 +12,16 @@ import { Plus, Edit } from "lucide-react"
 import type { WalletType } from "../types/expense"
 import { currencies, formatCurrency } from "../data/currency-data"
 
+const walletTypes = [
+  { value: "cash", label: "Cash", icon: "💵" },
+  { value: "bank", label: "Bank Account", icon: "🏦" },
+  { value: "credit", label: "Credit Card", icon: "💳" },
+  { value: "savings", label: "Savings Account", icon: "🏦" },
+  { value: "digital", label: "Digital Wallet", icon: "📱" },
+  { value: "investment", label: "Investment", icon: "📈" },
+  { value: "other", label: "Other", icon: "💼" },
+]
+
 interface WalletFormProps {
   wallet?: WalletType
   onSubmit: (wallet: Omit<WalletType, "id">) => void
@@ -24,6 +34,7 @@ export function WalletForm({ wallet, onSubmit, trigger }: WalletFormProps) {
     name: "",
     balance: "",
     currency: "USD",
+    type: "cash", // Added type to form data
   })
 
   useEffect(() => {
@@ -32,13 +43,14 @@ export function WalletForm({ wallet, onSubmit, trigger }: WalletFormProps) {
         name: wallet.name,
         balance: wallet.balance.toString(),
         currency: wallet.currency,
+        type: wallet.type || "cash", // Include type in form data
       })
     }
   }, [wallet])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name || !formData.balance || !formData.currency) return
+    if (!formData.name || !formData.balance || !formData.currency || !formData.type) return
 
     const selectedCurrency = currencies.find((c) => c.code === formData.currency)
     if (!selectedCurrency) return
@@ -47,11 +59,12 @@ export function WalletForm({ wallet, onSubmit, trigger }: WalletFormProps) {
       name: formData.name,
       balance: Number.parseFloat(formData.balance),
       currency: formData.currency,
+      type: formData.type, // Include type in submission
       exchangeRate: selectedCurrency.exchangeRate,
     })
 
     if (!wallet) {
-      setFormData({ name: "", balance: "", currency: "USD" })
+      setFormData({ name: "", balance: "", currency: "USD", type: "cash" })
     }
     setOpen(false)
   }
@@ -72,10 +85,7 @@ export function WalletForm({ wallet, onSubmit, trigger }: WalletFormProps) {
       <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {/* Wallet icon is removed to avoid redeclaration */}
-            {wallet ? "Edit Wallet" : "Create New Wallet"}
-          </DialogTitle>
+          <DialogTitle className="flex items-center gap-2">{wallet ? "Edit Wallet" : "Create New Wallet"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -87,6 +97,25 @@ export function WalletForm({ wallet, onSubmit, trigger }: WalletFormProps) {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="type">Wallet Type</Label>
+            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select wallet type" />
+              </SelectTrigger>
+              <SelectContent>
+                {walletTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    <div className="flex items-center gap-2">
+                      <span>{type.icon}</span>
+                      <span>{type.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

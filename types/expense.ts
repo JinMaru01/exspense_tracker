@@ -13,6 +13,7 @@ export interface Wallet {
   name: string
   balance: number
   currency: string // Add currency field
+  type: string // Added wallet type field
   exchangeRate?: number // Optional exchange rate to USD for conversion
 }
 

@@ -67,26 +67,28 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
   }
 
   const defaultTrigger = expense ? (
-    <Button variant="ghost" size="sm">
+    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
       <Edit className="h-4 w-4" />
     </Button>
   ) : (
-    <Button>
-      <Plus className="h-4 w-4 mr-2" />
-      Add Expense
+    <Button className="w-full sm:w-auto">
+      <Plus className="h-4 w-4 sm:mr-2" />
+      <span className="hidden sm:inline">Add Expense</span>
     </Button>
   )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{expense ? "Edit Expense" : "Add New Expense"}</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">{expense ? "Edit Expense" : "Add New Expense"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="wallet">Wallet</Label>
+            <Label htmlFor="wallet" className="text-sm">
+              Wallet
+            </Label>
             <Select
               value={formData.wallet}
               onValueChange={(value) => setFormData({ ...formData, wallet: value })}
@@ -99,8 +101,8 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
                 {wallets.map((wallet) => (
                   <SelectItem key={wallet.id} value={wallet.name}>
                     <div className="flex items-center justify-between w-full">
-                      <span>{wallet.name}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
+                      <span className="text-sm">{wallet.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">
                         {formatCurrency(wallet.balance, wallet.currency)}
                       </span>
                     </div>
@@ -111,7 +113,9 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount {selectedWallet && `(${selectedWallet.currency})`}</Label>
+            <Label htmlFor="amount" className="text-sm">
+              Amount {selectedWallet && `(${selectedWallet.currency})`}
+            </Label>
             <Input
               id="amount"
               type="number"
@@ -129,7 +133,9 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category" className="text-sm">
+              Category
+            </Label>
             <Select
               value={formData.category}
               onValueChange={(value) => setFormData({ ...formData, category: value })}
@@ -143,7 +149,7 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
                   <SelectItem key={category.id} value={category.name}>
                     <div className="flex items-center gap-2">
                       <span>{category.icon}</span>
-                      {category.name}
+                      <span className="text-sm">{category.name}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -152,7 +158,9 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-sm">
+              Description
+            </Label>
             <Textarea
               id="description"
               placeholder="Enter expense description..."
@@ -162,11 +170,13 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit">{expense ? "Update" : "Add"} Expense</Button>
+            <Button type="submit" className="w-full sm:w-auto">
+              {expense ? "Update" : "Add"} Expense
+            </Button>
           </div>
         </form>
       </DialogContent>
