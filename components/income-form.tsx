@@ -14,7 +14,7 @@ import { formatCurrency } from "../data/currency-data"
 
 interface IncomeFormProps {
   wallets: Wallet[]
-  onSubmit: (walletId: string, amount: number, description: string, category: string) => void
+  onSubmit: (walletId: string, amount: number, description: string, category: string, date: Date) => void
 }
 
 const incomeCategories = [
@@ -34,6 +34,7 @@ export function IncomeForm({ wallets, onSubmit }: IncomeFormProps) {
     wallet: "",
     category: "",
     description: "",
+    date: new Date().toISOString().split("T")[0], // Default to today in YYYY-MM-DD format
   })
 
   const selectedWallet = wallets.find((w) => w.id === formData.wallet)
@@ -42,9 +43,21 @@ export function IncomeForm({ wallets, onSubmit }: IncomeFormProps) {
     e.preventDefault()
     if (!formData.amount || !formData.wallet || !formData.category) return
 
-    onSubmit(formData.wallet, Number.parseFloat(formData.amount), formData.description, formData.category)
+    onSubmit(
+      formData.wallet,
+      Number.parseFloat(formData.amount),
+      formData.description,
+      formData.category,
+      new Date(formData.date),
+    )
 
-    setFormData({ amount: "", wallet: "", category: "", description: "" })
+    setFormData({
+      amount: "",
+      wallet: "",
+      category: "",
+      description: "",
+      date: new Date().toISOString().split("T")[0], // Reset to today
+    })
     setOpen(false)
   }
 
@@ -131,6 +144,21 @@ export function IncomeForm({ wallets, onSubmit }: IncomeFormProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date" className="text-sm">
+              Date
+            </Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              max={new Date().toISOString().split("T")[0]} // Prevent future dates
+              required
+              className="w-full"
+            />
           </div>
 
           <div className="space-y-2">

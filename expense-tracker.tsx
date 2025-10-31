@@ -31,7 +31,7 @@ export default function ExpenseTracker() {
     setExpenses((prev) => [newExpense, ...prev])
   }
 
-  const addIncome = (walletId: string, amount: number, description: string, category: string) => {
+  const addIncome = (walletId: string, amount: number, description: string, category: string, date: Date) => {
     const wallet = wallets.find((w) => w.id === walletId)
     if (!wallet) return
 
@@ -52,7 +52,7 @@ export default function ExpenseTracker() {
       category: category,
       wallet: wallet.name,
       description: description || "Income",
-      date: new Date(),
+      date: date, // Use the selected date instead of new Date()
       currency: wallet.currency,
     }
 

@@ -17,7 +17,7 @@ import type { Wallet } from "../types/wallet"
 
 interface ExpenseFormProps {
   expense?: Expense
-  wallets: Wallet[] // Add wallets prop
+  wallets: Wallet[]
   onSubmit: (expense: Omit<Expense, "id">) => void
   trigger?: React.ReactNode
 }
@@ -29,6 +29,7 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
     category: "",
     wallet: "",
     description: "",
+    date: new Date().toISOString().split("T")[0], // Default to today in YYYY-MM-DD format
   })
 
   const selectedWallet = wallets.find((w) => w.name === formData.wallet)
@@ -40,6 +41,7 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
         category: expense.category,
         wallet: expense.wallet,
         description: expense.description,
+        date: new Date(expense.date).toISOString().split("T")[0], // Convert expense date to input format
       })
     }
   }, [expense])
@@ -56,12 +58,18 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
       category: formData.category,
       wallet: formData.wallet,
       description: formData.description,
-      date: expense?.date || new Date(),
+      date: new Date(formData.date), // Use selected date instead of current date
       currency: wallet.currency,
     })
 
     if (!expense) {
-      setFormData({ amount: "", category: "", wallet: "", description: "" })
+      setFormData({
+        amount: "",
+        category: "",
+        wallet: "",
+        description: "",
+        date: new Date().toISOString().split("T")[0], // Reset to today
+      })
     }
     setOpen(false)
   }
@@ -155,6 +163,21 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date" className="text-sm">
+              Date
+            </Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              max={new Date().toISOString().split("T")[0]} // Prevent future dates
+              required
+              className="w-full"
+            />
           </div>
 
           <div className="space-y-2">
