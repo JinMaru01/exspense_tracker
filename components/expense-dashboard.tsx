@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import type { Expense } from "../types/expense"
 import { defaultCategories } from "../data/default-data"
 import { DownloadButton } from "./download-button"
@@ -19,9 +21,35 @@ interface ExpenseDashboardProps {
 
 export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
   const [displayCurrency, setDisplayCurrency] = useState<"USD" | "KHR">("USD")
+  const [filterType, setFilterType] = useState<"all" | "thisMonth" | "lastMonth" | "custom">("all")
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
+
+  const filteredExpenses = useMemo(() => {
+    const today = new Date()
+    let start = new Date(0)
+    let end = new Date()
+
+    if (filterType === "thisMonth") {
+      start = new Date(today.getFullYear(), today.getMonth(), 1)
+      end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    } else if (filterType === "lastMonth") {
+      start = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+      end = new Date(today.getFullYear(), today.getMonth(), 0)
+    } else if (filterType === "custom" && startDate && endDate) {
+      start = new Date(startDate)
+      end = new Date(endDate)
+      end.setHours(23, 59, 59, 999)
+    }
+
+    return expenses.filter((expense) => {
+      const expenseDate = new Date(expense.date)
+      return expenseDate >= start && expenseDate <= end
+    })
+  }, [expenses, filterType, startDate, endDate])
 
   const currencyTotals = useMemo(() => {
-    const totals = expenses.reduce(
+    const totals = filteredExpenses.reduce(
       (acc, expense) => {
         acc[expense.currency] = (acc[expense.currency] || 0) + expense.amount
         return acc
@@ -29,10 +57,10 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
       {} as Record<string, number>,
     )
     return totals
-  }, [expenses])
+  }, [filteredExpenses])
 
   const categoryTotals = useMemo(() => {
-    const totals = expenses.reduce(
+    const totals = filteredExpenses.reduce(
       (acc, expense) => {
         // Convert each expense to the selected display currency
         const amountInDisplayCurrency = convertCurrency(expense.amount, expense.currency, displayCurrency)
@@ -52,17 +80,17 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
       }))
       .filter((category) => category.total > 0)
       .sort((a, b) => b.total - a.total)
-  }, [expenses, displayCurrency])
+  }, [filteredExpenses, displayCurrency])
 
   const totalInDisplayCurrency = useMemo(() => {
-    return expenses.reduce((sum, expense) => {
+    return filteredExpenses.reduce((sum, expense) => {
       return sum + convertCurrency(expense.amount, expense.currency, displayCurrency)
     }, 0)
-  }, [expenses, displayCurrency])
+  }, [filteredExpenses, displayCurrency])
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-lg sm:text-xl font-semibold">Dashboard</h2>
         <div className="flex items-center gap-2">
           <span className="text-xs sm:text-sm text-muted-foreground">Display in:</span>
@@ -75,6 +103,58 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
               <SelectItem value="KHR">KHR (៛)</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-3 sm:p-4 bg-card border rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Select value={filterType} onValueChange={(value) => setFilterType(value as any)}>
+            <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="thisMonth">This Month</SelectItem>
+              <SelectItem value="lastMonth">Last Month</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {filterType === "custom" && (
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:flex-1">
+              <div className="flex-1">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-xs sm:text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-xs sm:text-sm"
+                />
+              </div>
+            </div>
+          )}
+
+          {filterType !== "all" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setFilterType("all")
+                setStartDate("")
+                setEndDate("")
+              }}
+              className="text-xs sm:text-sm"
+            >
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 
@@ -116,7 +196,7 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
         ))}
 
         <div className="flex justify-end col-span-1 sm:col-span-2 lg:col-span-1">
-          <DownloadButton expenses={expenses} />
+          <DownloadButton expenses={filteredExpenses} />
         </div>
       </div>
 
