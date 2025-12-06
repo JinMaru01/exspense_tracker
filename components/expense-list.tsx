@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Trash2 } from "lucide-react"
+import { Search, Trash2, X } from "lucide-react"
 import type { Expense, Wallet } from "../types/expense"
 import { defaultCategories } from "../data/default-data"
 import { ExpenseForm } from "./expense-form"
@@ -25,6 +25,28 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [walletFilter, setWalletFilter] = useState("all")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+
+  const getMonthDateRange = () => {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    return {
+      start: firstDay.toISOString().split("T")[0],
+      end: lastDay.toISOString().split("T")[0],
+    }
+  }
+
+  const getLastMonthDateRange = () => {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+    return {
+      start: firstDay.toISOString().split("T")[0],
+      end: lastDay.toISOString().split("T")[0],
+    }
+  }
 
   const filteredExpenses = expenses.filter((expense) => {
     const matchesSearch =
@@ -33,7 +55,22 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
     const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter
     const matchesWallet = walletFilter === "all" || expense.wallet === walletFilter
 
-    return matchesSearch && matchesCategory && matchesWallet
+    let matchesDateRange = true
+    if (startDate || endDate) {
+      const expenseDate = expense.date
+      if (startDate) {
+        const start = new Date(startDate)
+        start.setHours(0, 0, 0, 0)
+        matchesDateRange = matchesDateRange && expenseDate >= start
+      }
+      if (endDate) {
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59, 999)
+        matchesDateRange = matchesDateRange && expenseDate <= end
+      }
+    }
+
+    return matchesSearch && matchesCategory && matchesWallet && matchesDateRange
   })
 
   const getCategoryIcon = (categoryName: string) => {
@@ -97,6 +134,77 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="border rounded-lg p-3 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={!startDate && !endDate ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setStartDate("")
+                  setEndDate("")
+                }}
+              >
+                All Time
+              </Button>
+              <Button
+                variant={
+                  startDate === getMonthDateRange().start && endDate === getMonthDateRange().end ? "default" : "outline"
+                }
+                size="sm"
+                onClick={() => {
+                  const range = getMonthDateRange()
+                  setStartDate(range.start)
+                  setEndDate(range.end)
+                }}
+              >
+                This Month
+              </Button>
+              <Button
+                variant={
+                  startDate === getLastMonthDateRange().start && endDate === getLastMonthDateRange().end
+                    ? "default"
+                    : "outline"
+                }
+                size="sm"
+                onClick={() => {
+                  const range = getLastMonthDateRange()
+                  setStartDate(range.start)
+                  setEndDate(range.end)
+                }}
+              >
+                Last Month
+              </Button>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+              <div className="w-full sm:w-auto">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Start Date</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="w-full sm:w-auto">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">End Date</label>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
+              </div>
+              {(startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStartDate("")
+                    setEndDate("")
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>
