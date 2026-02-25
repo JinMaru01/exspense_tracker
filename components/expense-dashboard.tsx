@@ -59,8 +59,21 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
     return totals
   }, [filteredExpenses])
 
+  // Separate expenses and income
+  const onlyExpenses = useMemo(() => {
+    return filteredExpenses.filter((exp) => exp.type === "expense" || !exp.type)
+  }, [filteredExpenses])
+
+  const onlyIncome = useMemo(() => {
+    return filteredExpenses.filter((exp) => exp.type === "income")
+  }, [filteredExpenses])
+
+  const onlyTransfers = useMemo(() => {
+    return filteredExpenses.filter((exp) => exp.type === "transfer")
+  }, [filteredExpenses])
+
   const categoryTotals = useMemo(() => {
-    const totals = filteredExpenses.reduce(
+    const totals = onlyExpenses.reduce(
       (acc, expense) => {
         // Convert each expense to the selected display currency
         const amountInDisplayCurrency = convertCurrency(expense.amount, expense.currency, displayCurrency)
@@ -80,13 +93,25 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
       }))
       .filter((category) => category.total > 0)
       .sort((a, b) => b.total - a.total)
-  }, [filteredExpenses, displayCurrency])
+  }, [onlyExpenses, displayCurrency])
 
-  const totalInDisplayCurrency = useMemo(() => {
-    return filteredExpenses.reduce((sum, expense) => {
+  const totalExpensesInDisplayCurrency = useMemo(() => {
+    return onlyExpenses.reduce((sum, expense) => {
       return sum + convertCurrency(expense.amount, expense.currency, displayCurrency)
     }, 0)
-  }, [filteredExpenses, displayCurrency])
+  }, [onlyExpenses, displayCurrency])
+
+  const totalIncomeInDisplayCurrency = useMemo(() => {
+    return onlyIncome.reduce((sum, income) => {
+      return sum + convertCurrency(income.amount, income.currency, displayCurrency)
+    }, 0)
+  }, [onlyIncome, displayCurrency])
+
+  const totalTransfersInDisplayCurrency = useMemo(() => {
+    return onlyTransfers.reduce((sum, transfer) => {
+      return sum + convertCurrency(transfer.amount, transfer.currency, displayCurrency)
+    }, 0)
+  }, [onlyTransfers, displayCurrency])
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -159,41 +184,73 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
       </div>
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-green-200 bg-green-50/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total in {displayCurrency}</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium text-green-900">Total Income</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">
-              {formatCurrency(totalInDisplayCurrency, displayCurrency)}
+            <div className="text-xl sm:text-2xl font-bold text-green-700">
+              {formatCurrency(totalIncomeInDisplayCurrency, displayCurrency)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-green-600">
               ≈{" "}
               {formatCurrency(
-                convertCurrency(totalInDisplayCurrency, displayCurrency, displayCurrency === "USD" ? "KHR" : "USD"),
+                convertCurrency(totalIncomeInDisplayCurrency, displayCurrency, displayCurrency === "USD" ? "KHR" : "USD"),
                 displayCurrency === "USD" ? "KHR" : "USD",
               )}
             </p>
           </CardContent>
         </Card>
 
-        {Object.entries(currencyTotals).map(([currency, total]) => (
-          <Card key={currency}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Total in {currency}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">{formatCurrency(total, currency)}</div>
-              <p className="text-xs text-muted-foreground">
-                ≈{" "}
-                {formatCurrency(
-                  convertCurrency(total, currency, currency === "USD" ? "KHR" : "USD"),
-                  currency === "USD" ? "KHR" : "USD",
-                )}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="border-red-200 bg-red-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-red-900">Total Expenses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold text-red-700">
+              {formatCurrency(totalExpensesInDisplayCurrency, displayCurrency)}
+            </div>
+            <p className="text-xs text-red-600">
+              ≈{" "}
+              {formatCurrency(
+                convertCurrency(totalExpensesInDisplayCurrency, displayCurrency, displayCurrency === "USD" ? "KHR" : "USD"),
+                displayCurrency === "USD" ? "KHR" : "USD",
+              )}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-blue-900">Transfers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold text-blue-700">
+              {formatCurrency(totalTransfersInDisplayCurrency, displayCurrency)}
+            </div>
+            <p className="text-xs text-blue-600">
+              ≈{" "}
+              {formatCurrency(
+                convertCurrency(totalTransfersInDisplayCurrency, displayCurrency, displayCurrency === "USD" ? "KHR" : "USD"),
+                displayCurrency === "USD" ? "KHR" : "USD",
+              )}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Net Balance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-xl sm:text-2xl font-bold ${(totalIncomeInDisplayCurrency - totalExpensesInDisplayCurrency) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+              {formatCurrency(totalIncomeInDisplayCurrency - totalExpensesInDisplayCurrency, displayCurrency)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Income - Expenses
+            </p>
+          </CardContent>
+        </Card>
 
         <div className="flex justify-end col-span-1 sm:col-span-2 lg:col-span-1">
           <DownloadButton expenses={filteredExpenses} />

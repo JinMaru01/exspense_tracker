@@ -27,6 +27,7 @@ export default function ExpenseTracker() {
     const newExpense: Expense = {
       ...expenseData,
       id: Date.now().toString(),
+      type: expenseData.type || "expense",
     }
     setExpenses((prev) => [newExpense, ...prev])
   }
@@ -45,15 +46,16 @@ export default function ExpenseTracker() {
       }),
     )
 
-    // Create income record as negative expense (income)
+    // Create income record with type "income"
     const incomeRecord: Expense = {
       id: `income_${Date.now()}`,
-      amount: -amount, // Negative amount to indicate income
+      amount: amount,
       category: category,
       wallet: wallet.name,
       description: description || "Income",
-      date: date, // Use the selected date instead of new Date()
+      date: date,
       currency: wallet.currency,
+      type: "income",
     }
 
     setExpenses((prev) => [incomeRecord, ...prev])
@@ -99,12 +101,13 @@ export default function ExpenseTracker() {
     if (reason) {
       const adjustmentExpense: Expense = {
         id: `adj_${Date.now()}`,
-        amount: type === "subtract" ? amount : -amount, // Negative for income/deposits
+        amount: amount,
         category: type === "add" ? "Income/Deposit" : "Fees/Withdrawal",
         wallet: wallets.find((w) => w.id === walletId)?.name || "",
         description: reason,
         date: new Date(),
         currency: wallets.find((w) => w.id === walletId)?.currency || "USD",
+        type: type === "subtract" ? "expense" : "income",
       }
 
       if (type === "subtract") {
@@ -138,7 +141,7 @@ export default function ExpenseTracker() {
       }),
     )
 
-    // Create transfer record as expense
+    // Create transfer record with type "transfer"
     const transferExpense: Expense = {
       id: `transfer_${Date.now()}`,
       amount: amount,
@@ -149,6 +152,7 @@ export default function ExpenseTracker() {
         `Transfer to ${toWallet.name}${fromWallet.currency !== toWallet.currency ? ` (${convertedAmount.toFixed(2)} ${toWallet.currency})` : ""}`,
       date: new Date(),
       currency: fromWallet.currency,
+      type: "transfer",
     }
 
     setExpenses((prev) => [transferExpense, ...prev])
