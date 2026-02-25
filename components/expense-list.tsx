@@ -25,6 +25,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [walletFilter, setWalletFilter] = useState("all")
+  const [typeFilter, setTypeFilter] = useState("all")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
 
@@ -54,6 +55,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
       expense.category.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter
     const matchesWallet = walletFilter === "all" || expense.wallet === walletFilter
+    const matchesType = typeFilter === "all" || (expense.type || "expense") === typeFilter
 
     let matchesDateRange = true
     if (startDate || endDate) {
@@ -70,7 +72,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
       }
     }
 
-    return matchesSearch && matchesCategory && matchesWallet && matchesDateRange
+    return matchesSearch && matchesCategory && matchesWallet && matchesType && matchesDateRange
   })
 
   const getCategoryIcon = (categoryName: string) => {
@@ -108,6 +110,17 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="expense">💸 Expenses</SelectItem>
+                <SelectItem value="income">💰 Income</SelectItem>
+                <SelectItem value="transfer">🔄 Transfers</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by category" />
@@ -214,6 +227,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[100px]">Date</TableHead>
+                <TableHead className="min-w-[100px]">Type</TableHead>
                 <TableHead className="min-w-[120px]">Category</TableHead>
                 <TableHead className="min-w-[150px]">Description</TableHead>
                 <TableHead className="min-w-[100px]">Wallet</TableHead>
@@ -224,7 +238,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
             <TableBody>
               {filteredExpenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No expenses found
                   </TableCell>
                 </TableRow>
@@ -232,6 +246,20 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
                 filteredExpenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell className="text-xs sm:text-sm">{expense.date.toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs whitespace-nowrap font-medium ${
+                          expense.type === "income"
+                            ? "bg-green-50 text-green-700 border-green-300"
+                            : expense.type === "transfer"
+                              ? "bg-blue-50 text-blue-700 border-blue-300"
+                              : "bg-red-50 text-red-700 border-red-300"
+                        }`}
+                      >
+                        {expense.type === "income" ? "💰 Income" : expense.type === "transfer" ? "🔄 Transfer" : "💸 Expense"}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"

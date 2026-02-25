@@ -6,6 +6,7 @@ export interface Expense {
   description: string
   date: Date
   currency: string // Add currency field
+  type: "expense" | "income" | "transfer" // Track transaction type
 }
 
 export interface Wallet {

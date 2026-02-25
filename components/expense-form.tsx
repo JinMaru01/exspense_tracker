@@ -58,8 +58,9 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
       category: formData.category,
       wallet: formData.wallet,
       description: formData.description,
-      date: new Date(formData.date), // Use selected date instead of current date
+      date: new Date(formData.date),
       currency: wallet.currency,
+      type: "expense",
     })
 
     if (!expense) {
