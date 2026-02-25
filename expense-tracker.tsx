@@ -11,9 +11,45 @@ import { WalletTransfer } from "./components/wallet-transfer"
 import { useLocalStorage } from "./hooks/use-local-storage"
 import { defaultWallets } from "./data/default-data"
 
+// Migration function to add type field to existing expenses
+const migrateExpenses = (expenses: Expense[]): Expense[] => {
+  return expenses.map((expense) => {
+    // If type field doesn't exist, infer it from the data
+    if (!expense.type) {
+      // If amount is negative, it was likely income (old format)
+      if (expense.amount < 0) {
+        return {
+          ...expense,
+          amount: Math.abs(expense.amount),
+          type: "income",
+        }
+      }
+      // Default to expense
+      return {
+        ...expense,
+        type: "expense",
+      }
+    }
+    return expense
+  })
+}
+
 export default function ExpenseTracker() {
   const [expenses, setExpenses, expensesLoaded] = useLocalStorage<Expense[]>("expenses", [])
   const [wallets, setWallets, walletsLoaded] = useLocalStorage<Wallet[]>("wallets", defaultWallets)
+  
+  // Apply migration to existing data on first load
+  React.useEffect(() => {
+    if (expensesLoaded && expenses.length > 0) {
+      // Check if migration is needed
+      const needsMigration = expenses.some((exp) => !exp.type || exp.amount < 0)
+      
+      if (needsMigration) {
+        const migratedExpenses = migrateExpenses(expenses)
+        setExpenses(migratedExpenses)
+      }
+    }
+  }, [expensesLoaded, expenses.length])
 
   if (!expensesLoaded || !walletsLoaded) {
     return (
