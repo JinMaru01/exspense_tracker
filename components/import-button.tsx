@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Upload, AlertCircle, CheckCircle } from "lucide-react"
 import type { Expense } from "../types/expense"
 import { importCSVExpenses } from "../utils/csv-import"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface ImportButtonProps {
   onImport: (expenses: Expense[]) => void
@@ -72,17 +71,17 @@ export function ImportButton({ onImport, existingExpenses }: ImportButtonProps) 
       </Button>
 
       {error && (
-        <Alert variant="destructive" className="text-sm">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="text-sm border border-red-200 bg-red-50 rounded px-3 py-2 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+          <span className="text-red-700">{error}</span>
+        </div>
       )}
 
       {success && (
-        <Alert className="text-sm border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-700">{success}</AlertDescription>
-        </Alert>
+        <div className="text-sm border border-green-200 bg-green-50 rounded px-3 py-2 flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+          <span className="text-green-700">{success}</span>
+        </div>
       )}
     </div>
   )
