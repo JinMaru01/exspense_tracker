@@ -5,14 +5,20 @@ export function exportToCSV(expenses: Expense[], filename = "expenses") {
   const headers = ["Date", "Category", "Description", "Wallet", "Amount", "Currency"]
 
   // Convert expenses to CSV rows
-  const csvRows = expenses.map((expense) => [
-    expense.date.toLocaleDateString(),
-    expense.category,
-    `"${expense.description.replace(/"/g, '""')}"`, // Escape quotes in description
-    expense.wallet,
-    expense.amount.toString(),
-    expense.currency,
-  ])
+  const csvRows = expenses.map((expense) => {
+    const d = new Date(expense.date)
+    const day = String(d.getDate()).padStart(2, "0")
+    const month = String(d.getMonth() + 1).padStart(2, "0")
+    const year = d.getFullYear()
+    return [
+      `${day}/${month}/${year}`,
+      expense.category,
+      `"${expense.description.replace(/"/g, '""')}"`,
+      expense.wallet,
+      expense.amount.toString(),
+      expense.currency,
+    ]
+  })
 
   // Combine headers and rows
   const csvContent = [headers, ...csvRows].map((row) => row.join(",")).join("\n")

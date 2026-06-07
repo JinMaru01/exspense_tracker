@@ -1,20 +1,18 @@
-import type { Metadata } from 'next'
-import './globals.css'
+import type { Metadata } from "next"
+import { AntdRegistry } from "@ant-design/nextjs-registry"
+import "./globals.css"
 
 export const metadata: Metadata = {
-  title: 'Exspense Tracker',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: "Expense Tracker",
+  description: "Track and manage your expenses",
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AntdRegistry>{children}</AntdRegistry>
+      </body>
     </html>
   )
 }

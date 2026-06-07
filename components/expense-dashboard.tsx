@@ -1,19 +1,14 @@
-"use client"
-
-import type React from "react"
+﻿"use client"
 
 import { useMemo, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Card, Row, Col, Progress, Select, Button, Statistic, Tabs, DatePicker } from "antd"
+import { ArrowUpOutlined, ArrowDownOutlined, SwapOutlined } from "@ant-design/icons"
 import type { Expense } from "../types/expense"
 import { defaultCategories } from "../data/default-data"
 import { DownloadButton } from "./download-button"
 import { CurrencyConverter } from "./currency-converter"
 import { formatCurrency, convertCurrency } from "../data/currency-data"
+import dayjs from "dayjs"
 
 interface ExpenseDashboardProps {
   expenses: Expense[]
@@ -22,289 +17,183 @@ interface ExpenseDashboardProps {
 export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
   const [displayCurrency, setDisplayCurrency] = useState<"USD" | "KHR">("USD")
   const [filterType, setFilterType] = useState<"all" | "thisMonth" | "lastMonth" | "custom">("all")
-  const [startDate, setStartDate] = useState<string>("")
-  const [endDate, setEndDate] = useState<string>("")
+  const [customRange, setCustomRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
 
-  const filteredExpenses = useMemo(() => {
-    const today = new Date()
-    let start = new Date(0)
-    let end = new Date()
-
+  const filtered = useMemo(() => {
+    const today = dayjs()
     if (filterType === "thisMonth") {
-      start = new Date(today.getFullYear(), today.getMonth(), 1)
-      end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-    } else if (filterType === "lastMonth") {
-      start = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-      end = new Date(today.getFullYear(), today.getMonth(), 0)
-    } else if (filterType === "custom" && startDate && endDate) {
-      start = new Date(startDate)
-      end = new Date(endDate)
-      end.setHours(23, 59, 59, 999)
+      const start = today.startOf("month").toDate()
+      const end = today.endOf("month").toDate()
+      return expenses.filter((e) => new Date(e.date) >= start && new Date(e.date) <= end)
     }
+    if (filterType === "lastMonth") {
+      const start = today.subtract(1, "month").startOf("month").toDate()
+      const end = today.subtract(1, "month").endOf("month").toDate()
+      return expenses.filter((e) => new Date(e.date) >= start && new Date(e.date) <= end)
+    }
+    if (filterType === "custom" && customRange?.[0] && customRange?.[1]) {
+      const start = customRange[0].startOf("day").toDate()
+      const end = customRange[1].endOf("day").toDate()
+      return expenses.filter((e) => new Date(e.date) >= start && new Date(e.date) <= end)
+    }
+    return expenses
+  }, [expenses, filterType, customRange])
 
-    return expenses.filter((expense) => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate >= start && expenseDate <= end
-    })
-  }, [expenses, filterType, startDate, endDate])
+  const onlyExpenses = useMemo(() => filtered.filter((e) => e.type === "expense" || !e.type), [filtered])
+  const onlyIncome = useMemo(() => filtered.filter((e) => e.type === "income"), [filtered])
+  const onlyTransfers = useMemo(() => filtered.filter((e) => e.type === "transfer"), [filtered])
 
-  const currencyTotals = useMemo(() => {
-    const totals = filteredExpenses.reduce(
-      (acc, expense) => {
-        acc[expense.currency] = (acc[expense.currency] || 0) + expense.amount
-        return acc
-      },
-      {} as Record<string, number>,
-    )
-    return totals
-  }, [filteredExpenses])
-
-  // Separate expenses and income
-  const onlyExpenses = useMemo(() => {
-    return filteredExpenses.filter((exp) => exp.type === "expense" || !exp.type)
-  }, [filteredExpenses])
-
-  const onlyIncome = useMemo(() => {
-    return filteredExpenses.filter((exp) => exp.type === "income")
-  }, [filteredExpenses])
-
-  const onlyTransfers = useMemo(() => {
-    return filteredExpenses.filter((exp) => exp.type === "transfer")
-  }, [filteredExpenses])
+  const totalIncome = useMemo(
+    () => onlyIncome.reduce((s, e) => s + convertCurrency(e.amount, e.currency, displayCurrency), 0),
+    [onlyIncome, displayCurrency],
+  )
+  const totalExpenses = useMemo(
+    () => onlyExpenses.reduce((s, e) => s + convertCurrency(e.amount, e.currency, displayCurrency), 0),
+    [onlyExpenses, displayCurrency],
+  )
+  const totalTransfers = useMemo(
+    () => onlyTransfers.reduce((s, e) => s + convertCurrency(e.amount, e.currency, displayCurrency), 0),
+    [onlyTransfers, displayCurrency],
+  )
+  const net = totalIncome - totalExpenses
 
   const categoryTotals = useMemo(() => {
-    const totals = onlyExpenses.reduce(
-      (acc, expense) => {
-        // Convert each expense to the selected display currency
-        const amountInDisplayCurrency = convertCurrency(expense.amount, expense.currency, displayCurrency)
-        acc[expense.category] = (acc[expense.category] || 0) + amountInDisplayCurrency
-        return acc
-      },
-      {} as Record<string, number>,
-    )
-
-    const totalExpenses = Object.values(totals).reduce((sum, amount) => sum + amount, 0)
-
+    const totals: Record<string, number> = {}
+    for (const e of onlyExpenses) {
+      totals[e.category] = (totals[e.category] ?? 0) + convertCurrency(e.amount, e.currency, displayCurrency)
+    }
+    const total = Object.values(totals).reduce((s, v) => s + v, 0)
     return defaultCategories
-      .map((category) => ({
-        ...category,
-        total: totals[category.name] || 0,
-        percentage: totalExpenses > 0 ? ((totals[category.name] || 0) / totalExpenses) * 100 : 0,
+      .map((cat) => ({
+        ...cat,
+        total: totals[cat.name] ?? 0,
+        pct: total > 0 ? ((totals[cat.name] ?? 0) / total) * 100 : 0,
       }))
-      .filter((category) => category.total > 0)
+      .filter((c) => c.total > 0)
       .sort((a, b) => b.total - a.total)
   }, [onlyExpenses, displayCurrency])
 
-  const totalExpensesInDisplayCurrency = useMemo(() => {
-    return onlyExpenses.reduce((sum, expense) => {
-      return sum + convertCurrency(expense.amount, expense.currency, displayCurrency)
-    }, 0)
-  }, [onlyExpenses, displayCurrency])
-
-  const totalIncomeInDisplayCurrency = useMemo(() => {
-    return onlyIncome.reduce((sum, income) => {
-      return sum + convertCurrency(income.amount, income.currency, displayCurrency)
-    }, 0)
-  }, [onlyIncome, displayCurrency])
-
-  const totalTransfersInDisplayCurrency = useMemo(() => {
-    return onlyTransfers.reduce((sum, transfer) => {
-      return sum + convertCurrency(transfer.amount, transfer.currency, displayCurrency)
-    }, 0)
-  }, [onlyTransfers, displayCurrency])
+  const netColor = net >= 0 ? "#16a34a" : "#ef4444"
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-lg sm:text-xl font-semibold">Dashboard</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm text-muted-foreground">Display in:</span>
-          <Select value={displayCurrency} onValueChange={(value) => setDisplayCurrency(value as "USD" | "KHR")}>
-            <SelectTrigger className="w-[100px] sm:w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="USD">USD ($)</SelectItem>
-              <SelectItem value="KHR">KHR (៛)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-3 p-3 sm:p-4 bg-card border rounded-lg">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Select value={filterType} onValueChange={(value) => setFilterType(value as any)}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
-              <SelectItem value="thisMonth">This Month</SelectItem>
-              <SelectItem value="lastMonth">Last Month</SelectItem>
-              <SelectItem value="custom">Custom Range</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {filterType === "custom" && (
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:flex-1">
-              <div className="flex-1">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="text-xs sm:text-sm"
-                />
-              </div>
-              <div className="flex-1">
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="text-xs sm:text-sm"
-                />
-              </div>
-            </div>
-          )}
-
-          {filterType !== "all" && (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 flex-wrap">
+          {(["all", "thisMonth", "lastMonth"] as const).map((f) => (
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setFilterType("all")
-                setStartDate("")
-                setEndDate("")
-              }}
-              className="text-xs sm:text-sm"
+              key={f}
+              size="small"
+              type={filterType === f ? "primary" : "default"}
+              onClick={() => { setFilterType(f); setCustomRange(null) }}
             >
-              Clear
+              {f === "all" ? "All Time" : f === "thisMonth" ? "This Month" : "Last Month"}
             </Button>
-          )}
+          ))}
+        </div>
+        <DatePicker.RangePicker
+          size="small"
+          value={customRange as [dayjs.Dayjs, dayjs.Dayjs] | null}
+          format="DD/MM/YYYY"
+          onChange={(v) => {
+            setCustomRange(v)
+            setFilterType(v ? "custom" : "all")
+          }}
+          placeholder={["From", "To"]}
+          allowClear
+        />
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-400">Display:</span>
+          <Select
+            value={displayCurrency}
+            onChange={(v) => setDisplayCurrency(v)}
+            size="small"
+            style={{ width: 90 }}
+            options={[{ value: "USD", label: "USD ($)" }, { value: "KHR", label: "KHR (r)" }]}
+          />
+          <DownloadButton expenses={filtered} />
         </div>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-green-200 bg-green-50/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-green-900">Total Income</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-700">
-              {formatCurrency(totalIncomeInDisplayCurrency, displayCurrency)}
-            </div>
-            <p className="text-xs text-green-600">
-              ≈{" "}
-              {formatCurrency(
-                convertCurrency(totalIncomeInDisplayCurrency, displayCurrency, displayCurrency === "USD" ? "KHR" : "USD"),
-                displayCurrency === "USD" ? "KHR" : "USD",
-              )}
-            </p>
-          </CardContent>
-        </Card>
+      <Row gutter={[12, 12]}>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small" style={{ borderLeft: "3px solid #16a34a" }}>
+            <Statistic
+              title={<span className="text-xs">Total Income</span>}
+              value={formatCurrency(totalIncome, displayCurrency)}
+              styles={{ content: { color: "#16a34a", fontSize: 16, fontWeight: 700 } }}
+              prefix={<ArrowUpOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small" style={{ borderLeft: "3px solid #ef4444" }}>
+            <Statistic
+              title={<span className="text-xs">Total Expenses</span>}
+              value={formatCurrency(totalExpenses, displayCurrency)}
+              styles={{ content: { color: "#ef4444", fontSize: 16, fontWeight: 700 } }}
+              prefix={<ArrowDownOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small" style={{ borderLeft: "3px solid #3b82f6" }}>
+            <Statistic
+              title={<span className="text-xs">Transfers</span>}
+              value={formatCurrency(totalTransfers, displayCurrency)}
+              styles={{ content: { color: "#3b82f6", fontSize: 16, fontWeight: 700 } }}
+              prefix={<SwapOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small" style={{ borderLeft: "3px solid " + netColor }}>
+            <Statistic
+              title={<span className="text-xs">Net Balance</span>}
+              value={formatCurrency(Math.abs(net), displayCurrency)}
+              styles={{ content: { color: netColor, fontSize: 16, fontWeight: 700 } }}
+              prefix={net >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-        <Card className="border-red-200 bg-red-50/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-red-900">Total Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-red-700">
-              {formatCurrency(totalExpensesInDisplayCurrency, displayCurrency)}
-            </div>
-            <p className="text-xs text-red-600">
-              ≈{" "}
-              {formatCurrency(
-                convertCurrency(totalExpensesInDisplayCurrency, displayCurrency, displayCurrency === "USD" ? "KHR" : "USD"),
-                displayCurrency === "USD" ? "KHR" : "USD",
-              )}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-blue-200 bg-blue-50/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-blue-900">Transfers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-blue-700">
-              {formatCurrency(totalTransfersInDisplayCurrency, displayCurrency)}
-            </div>
-            <p className="text-xs text-blue-600">
-              ≈{" "}
-              {formatCurrency(
-                convertCurrency(totalTransfersInDisplayCurrency, displayCurrency, displayCurrency === "USD" ? "KHR" : "USD"),
-                displayCurrency === "USD" ? "KHR" : "USD",
-              )}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Net Balance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-xl sm:text-2xl font-bold ${(totalIncomeInDisplayCurrency - totalExpensesInDisplayCurrency) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {formatCurrency(totalIncomeInDisplayCurrency - totalExpensesInDisplayCurrency, displayCurrency)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Income - Expenses
-            </p>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end col-span-1 sm:col-span-2 lg:col-span-1">
-          <DownloadButton expenses={filteredExpenses} />
-        </div>
-      </div>
-
-      <Tabs defaultValue="categories" className="space-y-4">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="categories" className="flex-1 sm:flex-none text-xs sm:text-sm">
-            By Categories
-          </TabsTrigger>
-          <TabsTrigger value="converter" className="flex-1 sm:flex-none text-xs sm:text-sm">
-            Currency Converter
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="categories">
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {categoryTotals.map((category) => (
-              <Card key={category.id}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs sm:text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base sm:text-lg">{category.icon}</span>
-                      <span className="truncate">{category.name}</span>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold">{formatCurrency(category.total, displayCurrency)}</div>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-xs sm:text-sm">
-                      <span className="text-muted-foreground">{category.percentage.toFixed(1)}% of total</span>
-                    </div>
-                    <Progress
-                      value={category.percentage}
-                      className="h-2"
-                      style={
-                        {
-                          "--progress-background": category.color,
-                        } as React.CSSProperties
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="converter">
-          <CurrencyConverter />
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <Tabs
+          size="small"
+          items={[
+            {
+              key: "categories",
+              label: "By Category",
+              children:
+                categoryTotals.length === 0 ? (
+                  <p className="text-center text-gray-400 py-8">No expense data for this period.</p>
+                ) : (
+                  <Row gutter={[12, 12]} className="mt-2">
+                    {categoryTotals.map((cat) => (
+                      <Col xs={24} sm={12} lg={8} key={cat.id}>
+                        <Card size="small">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium">
+                              {cat.icon} {cat.name}
+                            </span>
+                            <span className="text-xs text-gray-400">{cat.pct.toFixed(1)}%</span>
+                          </div>
+                          <p className="font-bold text-base mb-2">{formatCurrency(cat.total, displayCurrency)}</p>
+                          <Progress percent={Math.round(cat.pct)} strokeColor={cat.color} showInfo={false} size="small" />
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                ),
+            },
+            {
+              key: "converter",
+              label: "Currency Converter",
+              children: <CurrencyConverter />,
+            },
+          ]}
+        />
+      </Card>
     </div>
   )
 }

@@ -1,271 +1,209 @@
-"use client"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import React from "react"
-import type { Expense, Wallet } from "./types/expense"
+﻿"use client"
+
+import React, { useState, useEffect } from "react"
+import { App, ConfigProvider, Tabs, Button, Avatar, Dropdown, Spin, Modal, Space, Typography } from "antd"
+import { UserOutlined, LogoutOutlined, CloudSyncOutlined, ImportOutlined, DeleteOutlined } from "@ant-design/icons"
+import { onAuthStateChanged, signOut, type User } from "firebase/auth"
+import { auth } from "./lib/firebase"
+import { useFirebaseData } from "./hooks/use-firebase-data"
+import { AuthScreen } from "./components/auth-screen"
 import { ExpenseForm } from "./components/expense-form"
 import { IncomeForm } from "./components/income-form"
 import { ExpenseDashboard } from "./components/expense-dashboard"
 import { ExpenseList } from "./components/expense-list"
-import { ExportSummary } from "./components/export-summary"
 import { WalletManager } from "./components/wallet-manager"
 import { WalletTransfer } from "./components/wallet-transfer"
+import { ExportSummary } from "./components/export-summary"
 import { ImportButton } from "./components/import-button"
-import { useLocalStorage } from "./hooks/use-local-storage"
-import { defaultWallets } from "./data/default-data"
-
-// Migration function to add type field to existing expenses
-const migrateExpenses = (expenses: Expense[]): Expense[] => {
-  return expenses.map((expense) => {
-    // If type field doesn't exist, infer it from the data
-    if (!expense.type) {
-      // If amount is negative, it was likely income (old format)
-      if (expense.amount < 0) {
-        return {
-          ...expense,
-          amount: Math.abs(expense.amount),
-          type: "income",
-        }
-      }
-      // Default to expense
-      return {
-        ...expense,
-        type: "expense",
-      }
-    }
-    return expense
-  })
-}
+import { SubscriptionManager } from "./components/subscription-manager"
 
 export default function ExpenseTracker() {
-  const [expenses, setExpenses, expensesLoaded] = useLocalStorage<Expense[]>("expenses", [])
-  const [wallets, setWallets, walletsLoaded] = useLocalStorage<Wallet[]>("wallets", defaultWallets)
-  
-  // Apply migration to existing data on first load
-  React.useEffect(() => {
-    if (expensesLoaded && expenses.length > 0) {
-      // Check if migration is needed
-      const needsMigration = expenses.some((exp) => !exp.type || exp.amount < 0)
-      
-      if (needsMigration) {
-        const migratedExpenses = migrateExpenses(expenses)
-        setExpenses(migratedExpenses)
-      }
-    }
-  }, [expensesLoaded, expenses.length])
+  const [user, setUser] = useState<User | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
 
-  if (!expensesLoaded || !walletsLoaded) {
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => { setUser(u); setAuthLoading(false) })
+    return unsub
+  }, [])
+
+  if (authLoading) {
     return (
-      <div className="container mx-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <Spin size="large"><div className="p-8 text-gray-400 text-sm">Loading…</div></Spin>
       </div>
     )
   }
 
-  const addExpense = (expenseData: Omit<Expense, "id">) => {
-    const newExpense: Expense = {
-      ...expenseData,
-      id: Date.now().toString(),
-      type: expenseData.type || "expense",
-    }
-    setExpenses((prev) => [newExpense, ...prev])
-  }
-
-  const importExpenses = (newExpenses: Expense[]) => {
-    setExpenses((prev) => [...newExpenses, ...prev])
-  }
-
-  const addIncome = (walletId: string, amount: number, description: string, category: string, date: Date) => {
-    const wallet = wallets.find((w) => w.id === walletId)
-    if (!wallet) return
-
-    // Update wallet balance
-    setWallets((prev) =>
-      prev.map((w) => {
-        if (w.id === walletId) {
-          return { ...w, balance: w.balance + amount }
-        }
-        return w
-      }),
-    )
-
-    // Create income record with type "income"
-    const incomeRecord: Expense = {
-      id: `income_${Date.now()}`,
-      amount: amount,
-      category: category,
-      wallet: wallet.name,
-      description: description || "Income",
-      date: date,
-      currency: wallet.currency,
-      type: "income",
-    }
-
-    setExpenses((prev) => [incomeRecord, ...prev])
-  }
-
-  const updateExpense = (id: string, expenseData: Omit<Expense, "id">) => {
-    setExpenses((prev) => prev.map((expense) => (expense.id === id ? { ...expenseData, id } : expense)))
-  }
-
-  const deleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id))
-  }
-
-  // Wallet management functions
-  const addWallet = (walletData: Omit<Wallet, "id">) => {
-    const newWallet: Wallet = {
-      ...walletData,
-      id: Date.now().toString(),
-    }
-    setWallets((prev) => [...prev, newWallet])
-  }
-
-  const updateWallet = (id: string, walletData: Omit<Wallet, "id">) => {
-    setWallets((prev) => prev.map((wallet) => (wallet.id === id ? { ...walletData, id } : wallet)))
-  }
-
-  const deleteWallet = (id: string) => {
-    setWallets((prev) => prev.filter((wallet) => wallet.id !== id))
-  }
-
-  const adjustWalletBalance = (walletId: string, amount: number, type: "add" | "subtract", reason: string) => {
-    setWallets((prev) =>
-      prev.map((wallet) => {
-        if (wallet.id === walletId) {
-          const newBalance = type === "add" ? wallet.balance + amount : wallet.balance - amount
-          return { ...wallet, balance: newBalance }
-        }
-        return wallet
-      }),
-    )
-
-    // Optionally, you could also create a transaction record for balance adjustments
-    if (reason) {
-      const adjustmentExpense: Expense = {
-        id: `adj_${Date.now()}`,
-        amount: amount,
-        category: type === "add" ? "Income/Deposit" : "Fees/Withdrawal",
-        wallet: wallets.find((w) => w.id === walletId)?.name || "",
-        description: reason,
-        date: new Date(),
-        currency: wallets.find((w) => w.id === walletId)?.currency || "USD",
-        type: type === "subtract" ? "expense" : "income",
-      }
-
-      if (type === "subtract") {
-        setExpenses((prev) => [adjustmentExpense, ...prev])
-      }
-    }
-  }
-
-  const handleWalletTransfer = (
-    fromWalletId: string,
-    toWalletId: string,
-    amount: number,
-    convertedAmount: number,
-    note: string,
-  ) => {
-    const fromWallet = wallets.find((w) => w.id === fromWalletId)
-    const toWallet = wallets.find((w) => w.id === toWalletId)
-
-    if (!fromWallet || !toWallet) return
-
-    // Update wallet balances
-    setWallets((prev) =>
-      prev.map((wallet) => {
-        if (wallet.id === fromWalletId) {
-          return { ...wallet, balance: wallet.balance - amount }
-        }
-        if (wallet.id === toWalletId) {
-          return { ...wallet, balance: wallet.balance + convertedAmount }
-        }
-        return wallet
-      }),
-    )
-
-    // Create transfer record with type "transfer"
-    const transferExpense: Expense = {
-      id: `transfer_${Date.now()}`,
-      amount: amount,
-      category: "Transfer",
-      wallet: fromWallet.name,
-      description:
-        note ||
-        `Transfer to ${toWallet.name}${fromWallet.currency !== toWallet.currency ? ` (${convertedAmount.toFixed(2)} ${toWallet.currency})` : ""}`,
-      date: new Date(),
-      currency: fromWallet.currency,
-      type: "transfer",
-    }
-
-    setExpenses((prev) => [transferExpense, ...prev])
-  }
+  if (!user) return <AuthScreen />
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Expense Tracker</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Track and manage your expenses across different categories and wallets
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <ImportButton onImport={importExpenses} existingExpenses={expenses} />
-          <IncomeForm wallets={wallets} onSubmit={addIncome} />
-          <ExpenseForm wallets={wallets} onSubmit={addExpense} />
+    <ConfigProvider theme={{ token: { colorPrimary: "#6366f1", borderRadius: 10 } }}>
+      <App>
+        <AppContent user={user} />
+      </App>
+    </ConfigProvider>
+  )
+}
+
+function AppContent({ user }: { user: User }) {
+  const { message } = App.useApp()
+  const {
+    expenses, wallets, subscriptions, loaded,
+    addExpense, importExpenses, addIncome,
+    updateExpense, deleteExpense,
+    addWallet, updateWallet, deleteWallet,
+    adjustWalletBalance, handleWalletTransfer,
+    addSubscription, updateSubscription, deleteSubscription, chargeSubscription,
+    clearAllData, hasLocalStorageData, migrateFromLocalStorage,
+  } = useFirebaseData(user.uid)
+
+  const [migrationOpen, setMigrationOpen] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+  const [clearOpen, setClearOpen] = useState(false)
+  const [clearing, setClearing] = useState(false)
+
+  useEffect(() => {
+    if (loaded && expenses.length === 0 && wallets.length === 0 && hasLocalStorageData()) {
+      setMigrationOpen(true)
+    }
+  }, [loaded])
+
+  const handleMigrate = async () => {
+    setMigrating(true)
+    try {
+      await migrateFromLocalStorage()
+      message.success("Data imported from browser successfully!")
+    } catch {
+      message.error("Import failed. Your local data is still intact.")
+    } finally { setMigrating(false); setMigrationOpen(false) }
+  }
+
+  const handleClearAll = async () => {
+    setClearing(true)
+    try {
+      await clearAllData()
+      message.success("All data cleared.")
+    } catch {
+      message.error("Failed to clear data.")
+    } finally { setClearing(false); setClearOpen(false) }
+  }
+
+  if (!loaded) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <Spin size="large" />
+        <Typography.Text type="secondary" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <CloudSyncOutlined /> Syncing your data…
+        </Typography.Text>
+      </div>
+    )
+  }
+
+  const overdueCount = subscriptions.filter((s) => {
+    if (!s.active) return false
+    const days = Math.ceil((new Date(s.nextDate).getTime() - Date.now()) / 86400000)
+    return days <= 0
+  }).length
+
+  const userMenu = {
+    items: [
+      { key: "email", label: <span className="text-gray-500 text-sm">{user.email}</span>, disabled: true },
+      { type: "divider" as const },
+      ...(hasLocalStorageData() ? [{ key: "migrate", label: "Import data from this browser", icon: <ImportOutlined />, onClick: () => setMigrationOpen(true) }] : []),
+      { key: "clear", label: <span className="text-red-500">Clear all data</span>, icon: <DeleteOutlined className="text-red-500" />, onClick: () => setClearOpen(true) },
+      { type: "divider" as const },
+      { key: "signout", label: "Sign out", icon: <LogoutOutlined />, onClick: () => signOut(auth) },
+    ],
+  }
+
+  const tabItems = [
+    {
+      key: "dashboard",
+      label: <span className="text-xs sm:text-sm">Dashboard</span>,
+      children: <ExpenseDashboard expenses={expenses} />,
+    },
+    {
+      key: "expenses",
+      label: <span className="text-xs sm:text-sm">Transactions</span>,
+      children: <ExpenseList expenses={expenses} wallets={wallets} onUpdateExpense={updateExpense} onDeleteExpense={deleteExpense} />,
+    },
+    {
+      key: "wallets",
+      label: <span className="text-xs sm:text-sm">Wallets</span>,
+      children: (
+        <WalletManager
+          wallets={wallets} expenses={expenses}
+          onAddWallet={addWallet} onUpdateWallet={updateWallet}
+          onDeleteWallet={deleteWallet} onAdjustBalance={adjustWalletBalance}
+        />
+      ),
+    },
+    {
+      key: "subscriptions",
+      label: (
+        <span className="text-xs sm:text-sm">
+          Subscriptions
+          {overdueCount > 0 && <span className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-xs">{overdueCount}</span>}
+        </span>
+      ),
+      children: (
+        <SubscriptionManager
+          subscriptions={subscriptions} wallets={wallets}
+          onAdd={addSubscription} onUpdate={updateSubscription}
+          onDelete={deleteSubscription} onCharge={chargeSubscription}
+        />
+      ),
+    },
+    {
+      key: "transfer",
+      label: <span className="text-xs sm:text-sm">Transfer</span>,
+      children: <WalletTransfer wallets={wallets} onTransfer={handleWalletTransfer} />,
+    },
+    {
+      key: "export",
+      label: <span className="text-xs sm:text-sm">Export</span>,
+      children: <ExportSummary expenses={expenses} wallets={wallets} subscriptions={subscriptions} />,
+    },
+  ]
+
+  return (
+    <div className="min-h-screen" style={{ background: "#f0f2f5" }}>
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-800">💰 Expense Tracker</h1>
+              <p className="text-xs text-gray-400 hidden sm:block">Real-time sync across all devices</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <ImportButton onImport={importExpenses} existingExpenses={expenses} />
+              <IncomeForm wallets={wallets} onSubmit={addIncome} />
+              <ExpenseForm wallets={wallets} onSubmit={addExpense} />
+              <Dropdown menu={userMenu} placement="bottomRight">
+                <Button type="text" className="p-0 h-auto">
+                  <Avatar src={user.photoURL} icon={!user.photoURL ? <UserOutlined /> : undefined}
+                    size={36} className="cursor-pointer" style={{ background: "#6366f1" }} />
+                </Button>
+              </Dropdown>
+            </div>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-4 sm:space-y-6">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
-          <TabsTrigger value="dashboard" className="text-xs sm:text-sm">
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="expenses" className="text-xs sm:text-sm">
-            Expenses
-          </TabsTrigger>
-          <TabsTrigger value="wallets" className="text-xs sm:text-sm">
-            Wallets
-          </TabsTrigger>
-          <TabsTrigger value="transfer" className="text-xs sm:text-sm">
-            Transfer
-          </TabsTrigger>
-          <TabsTrigger value="export" className="text-xs sm:text-sm">
-            Export
-          </TabsTrigger>
-        </TabsList>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 pb-safe">
+        <Tabs defaultValue="dashboard" items={tabItems} className="expense-tabs" size="large" style={{ background: "transparent" }} />
+      </div>
 
-        <TabsContent value="dashboard" className="space-y-6">
-          <ExpenseDashboard expenses={expenses} />
-        </TabsContent>
+      <Modal open={migrationOpen} title="Import existing data?" onCancel={() => setMigrationOpen(false)}
+        footer={<Space><Button onClick={() => setMigrationOpen(false)}>Skip</Button><Button type="primary" loading={migrating} onClick={handleMigrate}>Import to cloud</Button></Space>}>
+        <p className="text-gray-600">We found existing data saved in this browser. Would you like to import it into your account so it syncs across all your devices?</p>
+        <p className="text-gray-400 text-sm mt-2">This happens once. Your data will be moved from local storage to the cloud.</p>
+      </Modal>
 
-        <TabsContent value="expenses" className="space-y-6">
-          <ExpenseList
-            expenses={expenses}
-            wallets={wallets}
-            onUpdateExpense={updateExpense}
-            onDeleteExpense={deleteExpense}
-          />
-        </TabsContent>
-
-        <TabsContent value="wallets" className="space-y-6">
-          <WalletManager
-            wallets={wallets}
-            expenses={expenses}
-            onAddWallet={addWallet}
-            onUpdateWallet={updateWallet}
-            onDeleteWallet={deleteWallet}
-          />
-        </TabsContent>
-
-        <TabsContent value="transfer" className="space-y-6">
-          <WalletTransfer wallets={wallets} onTransfer={handleWalletTransfer} />
-        </TabsContent>
-
-        <TabsContent value="export" className="space-y-6">
-          <ExportSummary expenses={expenses} />
-        </TabsContent>
-      </Tabs>
+      <Modal open={clearOpen} title="Clear all data?" onCancel={() => setClearOpen(false)}
+        footer={<Space><Button onClick={() => setClearOpen(false)}>Cancel</Button><Button danger loading={clearing} onClick={handleClearAll}>Yes, delete everything</Button></Space>}>
+        <p className="text-gray-600">This will permanently delete all your expenses, wallets, and subscriptions from the cloud. This cannot be undone.</p>
+      </Modal>
     </div>
   )
 }

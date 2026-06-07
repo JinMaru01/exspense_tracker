@@ -1,189 +1,143 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { TrendingUp } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Modal, Form, Input, InputNumber, Select, DatePicker, Button } from "antd"
+import { ArrowUpOutlined, LockOutlined } from "@ant-design/icons"
+import dayjs from "dayjs"
 import type { Wallet } from "../types/expense"
 import { formatCurrency } from "../data/currency-data"
 
+const incomeCategories = [
+  { value: "Salary", label: "💼 Salary" },
+  { value: "Freelance", label: "💻 Freelance" },
+  { value: "Business", label: "🏢 Business" },
+  { value: "Investment", label: "📈 Investment" },
+  { value: "Gift", label: "🎁 Gift" },
+  { value: "Refund", label: "↩️ Refund" },
+  { value: "Other Income", label: "💰 Other Income" },
+]
+
 interface IncomeFormProps {
   wallets: Wallet[]
-  onSubmit: (walletId: string, amount: number, description: string, category: string, date: Date) => void
+  onSubmit: (walletId: string, amount: number, description: string, category: string, date: Date) => Promise<void> | void
 }
-
-const incomeCategories = [
-  { id: "salary", name: "Salary", icon: "💼" },
-  { id: "freelance", name: "Freelance", icon: "💻" },
-  { id: "business", name: "Business", icon: "🏢" },
-  { id: "investment", name: "Investment", icon: "📈" },
-  { id: "gift", name: "Gift", icon: "🎁" },
-  { id: "refund", name: "Refund", icon: "↩️" },
-  { id: "other", name: "Other Income", icon: "💰" },
-]
 
 export function IncomeForm({ wallets, onSubmit }: IncomeFormProps) {
   const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState({
-    amount: "",
-    wallet: "",
-    category: "",
-    description: "",
-    date: new Date().toISOString().split("T")[0], // Default to today in YYYY-MM-DD format
-  })
+  const [confirming, setConfirming] = useState(false)
+  const [selectedWallet, setSelectedWallet] = useState<Wallet | undefined>()
+  const [form] = Form.useForm()
 
-  const selectedWallet = wallets.find((w) => w.id === formData.wallet)
+  useEffect(() => {
+    if (open) {
+      form.resetFields()
+      form.setFieldsValue({ date: dayjs() })
+      setSelectedWallet(undefined)
+    }
+  }, [open])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.amount || !formData.wallet || !formData.category) return
-
-    onSubmit(
-      formData.wallet,
-      Number.parseFloat(formData.amount),
-      formData.description,
-      formData.category,
-      new Date(formData.date),
-    )
-
-    setFormData({
-      amount: "",
-      wallet: "",
-      category: "",
-      description: "",
-      date: new Date().toISOString().split("T")[0], // Reset to today
-    })
-    setOpen(false)
+  const doSubmit = async (values: ReturnType<typeof form.getFieldsValue>) => {
+    setConfirming(true)
+    try {
+      await onSubmit(
+        values.wallet,
+        values.amount,
+        values.description || "",
+        values.category,
+        values.date ? values.date.toDate() : new Date(),
+      )
+      setOpen(false)
+    } catch {
+      // validation errors handled by Form
+    } finally {
+      setConfirming(false)
+    }
   }
 
+  const handleOk = async () => {
+    try {
+      const values = await form.validateFields()
+      const wallet = wallets.find((w) => w.id === values.wallet)
+      if (wallet?.locked) {
+        Modal.confirm({
+          title: <span><LockOutlined className="text-amber-500 mr-2" />Locked wallet</span>,
+          content: `"${wallet.name}" is locked. Are you sure you want to add income to this wallet?`,
+          okText: "Proceed",
+          cancelText: "Cancel",
+          onOk: () => doSubmit(values),
+        })
+        return
+      }
+      await doSubmit(values)
+    } catch {
+      // validation errors handled by Form
+    }
+  }
+
+  const walletOptions = wallets.map((w) => ({
+    value: w.id,
+    label: `${w.name} — ${formatCurrency(w.balance, w.currency)}`,
+  }))
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="default" className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
-          <TrendingUp className="h-4 w-4 sm:mr-2" />
-          <span className="hidden sm:inline">Add Income</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">Add Income</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="wallet" className="text-sm">
-              Deposit to Wallet
-            </Label>
-            <Select
-              value={formData.wallet}
-              onValueChange={(value) => setFormData({ ...formData, wallet: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select wallet" />
-              </SelectTrigger>
-              <SelectContent>
-                {wallets.map((wallet) => (
-                  <SelectItem key={wallet.id} value={wallet.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-sm">{wallet.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {formatCurrency(wallet.balance, wallet.currency)}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        style={{ background: "#16a34a", borderColor: "#16a34a", color: "#fff", height: 40 }}
+        icon={<ArrowUpOutlined />}
+      >
+        <span className="hidden sm:inline ml-1">Add Income</span>
+      </Button>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount" className="text-sm">
-              Amount {selectedWallet && `(${selectedWallet.currency})`}
-            </Label>
-            <Input
-              id="amount"
-              type="number"
-              step={selectedWallet?.currency === "KHR" ? "1" : "0.01"}
-              placeholder={selectedWallet?.currency === "KHR" ? "0" : "0.00"}
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              required
+      <Modal
+        title="Add Income"
+        open={open}
+        onCancel={() => setOpen(false)}
+        onOk={handleOk}
+        okText="Add Income"
+        okButtonProps={{ style: { background: "#16a34a", borderColor: "#16a34a" } }}
+        confirmLoading={confirming}
+        destroyOnHidden
+        width="min(90vw, 440px)"
+      >
+        <Form form={form} layout="vertical" className="mt-2">
+          <Form.Item name="wallet" label="Deposit to Wallet" rules={[{ required: true, message: "Select a wallet" }]}>
+            <Select
+              options={walletOptions}
+              placeholder="Select wallet"
+              onChange={(id) => setSelectedWallet(wallets.find((w) => w.id === id))}
             />
-            {selectedWallet && formData.amount && (
-              <div className="text-sm text-green-600 font-medium">
-                + {formatCurrency(Number.parseFloat(formData.amount), selectedWallet.currency)}
-              </div>
-            )}
-          </div>
+          </Form.Item>
 
-          <div className="space-y-2">
-            <Label htmlFor="category" className="text-sm">
-              Income Category
-            </Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {incomeCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
-                    <div className="flex items-center gap-2">
-                      <span>{category.icon}</span>
-                      <span className="text-sm">{category.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="date" className="text-sm">
-              Date
-            </Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              max={new Date().toISOString().split("T")[0]} // Prevent future dates
-              required
+          <Form.Item
+            name="amount"
+            label={`Amount${selectedWallet ? ` (${selectedWallet.currency})` : ""}`}
+            rules={[
+              { required: true, message: "Enter an amount" },
+              { type: "number", min: 0.01, message: "Must be greater than 0" },
+            ]}
+          >
+            <InputNumber
               className="w-full"
+              min={0}
+              step={selectedWallet?.currency === "KHR" ? 1 : 0.01}
+              placeholder={selectedWallet?.currency === "KHR" ? "0" : "0.00"}
             />
-          </div>
+          </Form.Item>
 
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm">
-              Description
-            </Label>
-            <Textarea
-              id="description"
-              placeholder="Enter income description..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-            />
-          </div>
+          <Form.Item name="category" label="Income Category" rules={[{ required: true, message: "Select a category" }]}>
+            <Select options={incomeCategories} placeholder="Select category" />
+          </Form.Item>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
-              Cancel
-            </Button>
-            <Button type="submit" className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
-              Add Income
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <Form.Item name="date" label="Date" rules={[{ required: true, message: "Select a date" }]}>
+            <DatePicker className="w-full" disabledDate={(d) => d.isAfter(dayjs())} format="DD/MM/YYYY" />
+          </Form.Item>
+
+          <Form.Item name="description" label="Description">
+            <Input.TextArea placeholder="Enter income description…" rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
   )
 }

@@ -1,252 +1,201 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Trash2, TrendingUp, TrendingDown } from "lucide-react"
+import { Card, Table, Tag, Button, Popconfirm, Statistic, Row, Col, Tooltip } from "antd"
+import type { ColumnsType } from "antd/es/table"
+import { WalletOutlined, DeleteOutlined, ArrowUpOutlined, ArrowDownOutlined, LockOutlined, UnlockOutlined } from "@ant-design/icons"
 import type { Wallet as WalletType, Expense } from "../types/expense"
 import { WalletForm } from "./wallet-form"
+import { BalanceAdjustment } from "./balance-adjustment"
 import { formatCurrency, convertCurrency } from "../data/currency-data"
 
 interface WalletManagerProps {
   wallets: WalletType[]
   expenses: Expense[]
-  onAddWallet: (wallet: Omit<WalletType, "id">) => void
-  onUpdateWallet: (id: string, wallet: Omit<WalletType, "id">) => void
-  onDeleteWallet: (id: string) => void
+  onAddWallet: (wallet: Omit<WalletType, "id">) => Promise<void> | void
+  onUpdateWallet: (id: string, wallet: Omit<WalletType, "id">) => Promise<void> | void
+  onDeleteWallet: (id: string) => Promise<void> | void
+  onAdjustBalance: (walletId: string, amount: number, type: "add" | "subtract", reason: string) => Promise<void> | void
 }
 
-export function WalletManager({ wallets, expenses, onAddWallet, onUpdateWallet, onDeleteWallet }: WalletManagerProps) {
-  const [selectedWallet, setSelectedWallet] = useState<string | null>(null)
+export function WalletManager({
+  wallets, expenses, onAddWallet, onUpdateWallet, onDeleteWallet, onAdjustBalance,
+}: WalletManagerProps) {
+  const totalPortfolioUSD = wallets.reduce(
+    (sum, w) => sum + convertCurrency(w.balance, w.currency, "USD"), 0,
+  )
 
-  // Calculate wallet statistics
+  const canDelete = (walletId: string) => {
+    const w = wallets.find((x) => x.id === walletId)
+    return w ? !expenses.some((e) => e.wallet === w.name) : false
+  }
+
   const getWalletStats = (wallet: WalletType) => {
-    const walletExpenses = expenses.filter((expense) => expense.wallet === wallet.name)
-    const totalSpent = walletExpenses.reduce((sum, expense) => sum + expense.amount, 0)
-    const currentBalance = wallet.balance - totalSpent
-    const transactionCount = walletExpenses.length
-
-    return {
-      totalSpent,
-      currentBalance,
-      transactionCount,
-      initialBalance: wallet.balance,
-    }
+    const txs = expenses.filter((e) => e.wallet === wallet.name)
+    const totalSpent = txs
+      .filter((e) => e.type === "expense" || !e.type)
+      .reduce((s, e) => s + e.amount, 0)
+    return { totalSpent, txCount: txs.length }
   }
 
-  // Calculate total portfolio value in USD
-  const totalPortfolioUSD = wallets.reduce((sum, wallet) => {
-    const stats = getWalletStats(wallet)
-    return sum + convertCurrency(stats.currentBalance, wallet.currency, "USD")
-  }, 0)
-
-  const canDeleteWallet = (walletId: string) => {
-    const wallet = wallets.find((w) => w.id === walletId)
-    if (!wallet) return false
-    return !expenses.some((expense) => expense.wallet === wallet.name)
-  }
+  const columns: ColumnsType<WalletType> = [
+    {
+      title: "Wallet",
+      dataIndex: "name",
+      key: "name",
+      render: (name: string) => (
+        <span className="font-medium flex items-center gap-2">
+          <WalletOutlined className="text-indigo-400" />
+          {name}
+        </span>
+      ),
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      responsive: ["sm"],
+      render: (type: string) => <Tag className="capitalize">{type}</Tag>,
+    },
+    {
+      title: "Currency",
+      dataIndex: "currency",
+      key: "currency",
+      render: (cur: string) => <Tag color="blue">{cur}</Tag>,
+    },
+    {
+      title: "Spent",
+      key: "spent",
+      responsive: ["md"],
+      render: (_: unknown, record: WalletType) => {
+        const { totalSpent } = getWalletStats(record)
+        return totalSpent > 0 ? (
+          <span className="text-red-500">-{formatCurrency(totalSpent, record.currency)}</span>
+        ) : (
+          <span className="text-gray-300">—</span>
+        )
+      },
+    },
+    {
+      title: "Balance",
+      key: "balance",
+      render: (_: unknown, record: WalletType) => {
+        const neg = record.balance < 0
+        return (
+          <span className={`font-semibold ${neg ? "text-red-500" : "text-green-600"}`}>
+            {neg ? <ArrowDownOutlined /> : <ArrowUpOutlined />}{" "}
+            {formatCurrency(Math.abs(record.balance), record.currency)}
+          </span>
+        )
+      },
+    },
+    {
+      title: "Txns",
+      key: "txns",
+      responsive: ["sm"],
+      render: (_: unknown, record: WalletType) => {
+        const { txCount } = getWalletStats(record)
+        return <Tag>{txCount}</Tag>
+      },
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_: unknown, record: WalletType) => (
+        <div className="flex items-center gap-1 flex-wrap">
+          <Tooltip title={record.locked ? "Unlock wallet" : "Lock wallet"}>
+            <Popconfirm
+              title={record.locked ? "Unlock this wallet?" : "Lock this wallet?"}
+              description={record.locked ? "Transactions will no longer require confirmation." : "Any transaction from this wallet will require confirmation."}
+              onConfirm={() => onUpdateWallet(record.id, { ...record, locked: !record.locked })}
+              okText={record.locked ? "Unlock" : "Lock"}
+              cancelText="Cancel"
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={record.locked ? <LockOutlined style={{ color: "#f59e0b" }} /> : <UnlockOutlined style={{ color: "#9ca3af" }} />}
+              />
+            </Popconfirm>
+          </Tooltip>
+          <BalanceAdjustment wallet={record} onAdjustBalance={onAdjustBalance} />
+          <WalletForm wallet={record} onSubmit={(data) => onUpdateWallet(record.id, data)} />
+          <Popconfirm
+            title="Delete wallet?"
+            description={
+              canDelete(record.id)
+                ? "This cannot be undone."
+                : "This wallet has transactions and cannot be deleted."
+            }
+            onConfirm={() => canDelete(record.id) && onDeleteWallet(record.id)}
+            okText="Delete"
+            okButtonProps={{ danger: true, disabled: !canDelete(record.id) }}
+            cancelText="Cancel"
+          >
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={!canDelete(record.id)}
+            />
+          </Popconfirm>
+        </div>
+      ),
+    },
+  ]
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Portfolio Overview */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total Wallets</CardTitle>
-            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{wallets.length}</div>
-          </CardContent>
-        </Card>
+    <div className="space-y-4">
+      {/* Portfolio stats */}
+      <Row gutter={[12, 12]}>
+        <Col xs={12} sm={6}>
+          <Card size="small" className="text-center">
+            <Statistic title="Total Wallets" value={wallets.length} prefix={<WalletOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" className="text-center">
+            <Statistic
+              title="Portfolio (USD)"
+              value={totalPortfolioUSD.toFixed(2)}
+              prefix="$"
+              valueStyle={{ color: "#6366f1" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" className="text-center">
+            <Statistic
+              title="USD Wallets"
+              value={wallets.filter((w) => w.currency === "USD").length}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small" className="text-center">
+            <Statistic
+              title="KHR Wallets"
+              value={wallets.filter((w) => w.currency === "KHR").length}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Portfolio Value</CardTitle>
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalPortfolioUSD, "USD")}</div>
-            <p className="text-xs text-muted-foreground">Current balance across all wallets</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">USD Wallets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{wallets.filter((w) => w.currency === "USD").length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">KHR Wallets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{wallets.filter((w) => w.currency === "KHR").length}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Wallet Management */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <CardTitle className="text-lg sm:text-xl">Manage Wallets</CardTitle>
-            <WalletForm onSubmit={onAddWallet} />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[120px]">Wallet Name</TableHead>
-                  <TableHead className="min-w-[100px]">Type</TableHead>
-                  <TableHead className="min-w-[80px]">Currency</TableHead>
-                  <TableHead className="text-right min-w-[100px]">Initial Balance</TableHead>
-                  <TableHead className="text-right min-w-[100px]">Total Spent</TableHead>
-                  <TableHead className="text-right min-w-[120px]">Current Balance</TableHead>
-                  <TableHead className="text-center min-w-[100px]">Transactions</TableHead>
-                  <TableHead className="text-right min-w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {wallets.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground text-sm">
-                      No wallets found. Create your first wallet to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  wallets.map((wallet) => {
-                    const stats = getWalletStats(wallet)
-                    const isNegative = stats.currentBalance < 0
-
-                    return (
-                      <TableRow key={wallet.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                            <span className="text-xs sm:text-sm">{wallet.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {wallet.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {wallet.currency}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">
-                          {formatCurrency(stats.initialBalance, wallet.currency)}
-                        </TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">
-                          {stats.totalSpent > 0 ? (
-                            <span className="text-red-600">-{formatCurrency(stats.totalSpent, wallet.currency)}</span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {isNegative ? (
-                              <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
-                            ) : (
-                              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
-                            )}
-                            <span
-                              className={`text-xs sm:text-sm ${isNegative ? "text-red-600 font-medium" : "text-green-600 font-medium"}`}
-                            >
-                              {formatCurrency(Math.abs(stats.currentBalance), wallet.currency)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="secondary" className="text-xs">
-                            {stats.transactionCount}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1 sm:gap-2">
-                            <WalletForm
-                              wallet={wallet}
-                              onSubmit={(updatedWallet) => onUpdateWallet(wallet.id, updatedWallet)}
-                            />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={!canDeleteWallet(wallet.id)}
-                                  className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Wallet</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{wallet.name}"? This action cannot be undone.
-                                    {!canDeleteWallet(wallet.id) && (
-                                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
-                                        This wallet cannot be deleted because it has associated transactions.
-                                      </div>
-                                    )}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => onDeleteWallet(wallet.id)}
-                                    disabled={!canDeleteWallet(wallet.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+      {/* Wallet table */}
+      <Card
+        title="Manage Wallets"
+        extra={<WalletForm onSubmit={onAddWallet} />}
+      >
+        <Table
+          dataSource={wallets}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          scroll={{ x: true }}
+          locale={{ emptyText: "No wallets yet. Create your first wallet." }}
+          size="middle"
+        />
       </Card>
-
-      {/* Wallet Details */}
-      {selectedWallet && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Wallet Details</CardTitle>
-          </CardHeader>
-          <CardContent>{/* Add detailed wallet view here if needed */}</CardContent>
-        </Card>
-      )}
     </div>
   )
 }

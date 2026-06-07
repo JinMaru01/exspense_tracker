@@ -5,8 +5,10 @@ export interface Expense {
   wallet: string
   description: string
   date: Date
-  currency: string // Add currency field
-  type: "expense" | "income" | "transfer" // Track transaction type
+  currency: string
+  type: "expense" | "income" | "transfer"
+  toWallet?: string       // destination wallet name, for transfer type only
+  convertedAmount?: number // converted amount received by toWallet, for transfer type only
 }
 
 export interface Wallet {
@@ -14,8 +16,9 @@ export interface Wallet {
   name: string
   balance: number
   currency: string // Add currency field
-  type: string // Added wallet type field
-  exchangeRate?: number // Optional exchange rate to USD for conversion
+  type: string
+  exchangeRate?: number
+  locked?: boolean
 }
 
 export interface Category {
@@ -23,6 +26,19 @@ export interface Category {
   name: string
   color: string
   icon: string
+}
+
+export interface Subscription {
+  id: string
+  name: string
+  amount: number
+  currency: string
+  wallet: string
+  category: string
+  cycle: "weekly" | "monthly" | "yearly"
+  nextDate: Date
+  active: boolean
+  description?: string
 }
 
 export interface Currency {
