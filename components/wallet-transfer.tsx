@@ -1,239 +1,160 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeftRight, RefreshCw } from "lucide-react"
+import { Card, Form, InputNumber, Select, Button, Alert, Modal } from "antd"
+import { SwapOutlined, ReloadOutlined, LockOutlined } from "@ant-design/icons"
 import type { Wallet } from "../types/expense"
 import { formatCurrency } from "../data/currency-data"
 import { convertWithLiveRate } from "../lib/exchange-rate-api"
 
 interface WalletTransferProps {
   wallets: Wallet[]
-  onTransfer: (fromWalletId: string, toWalletId: string, amount: number, convertedAmount: number, note: string) => void
+  onTransfer: (fromWalletId: string, toWalletId: string, amount: number, convertedAmount: number, note: string) => Promise<void> | void
 }
 
 export function WalletTransfer({ wallets, onTransfer }: WalletTransferProps) {
-  const [fromWalletId, setFromWalletId] = useState("")
-  const [toWalletId, setToWalletId] = useState("")
-  const [amount, setAmount] = useState("")
+  const [fromId, setFromId] = useState("")
+  const [toId, setToId] = useState("")
+  const [amount, setAmount] = useState<number | null>(null)
   const [note, setNote] = useState("")
-  const [convertedAmount, setConvertedAmount] = useState<number | null>(null)
-  const [exchangeRate, setExchangeRate] = useState<number | null>(null)
-  const [isCalculating, setIsCalculating] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [converted, setConverted] = useState<number | null>(null)
+  const [rate, setRate] = useState<number | null>(null)
+  const [calculating, setCalculating] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const fromWallet = wallets.find((w) => w.id === fromWalletId)
-  const toWallet = wallets.find((w) => w.id === toWalletId)
+  const fromWallet = wallets.find((w) => w.id === fromId)
+  const toWallet = wallets.find((w) => w.id === toId)
 
-  // Calculate conversion when amount or wallets change
   useEffect(() => {
-    const calculateConversion = async () => {
-      if (!amount || !fromWallet || !toWallet || Number.parseFloat(amount) <= 0) {
-        setConvertedAmount(null)
-        setExchangeRate(null)
-        return
-      }
-
-      setIsCalculating(true)
-      try {
-        const { convertedAmount: converted, rate } = await convertWithLiveRate(
-          Number.parseFloat(amount),
-          fromWallet.currency,
-          toWallet.currency,
-        )
-        setConvertedAmount(converted)
-        setExchangeRate(rate)
-        setLastUpdated(new Date())
-      } catch (error) {
-        console.error("[v0] Error calculating conversion:", error)
-      } finally {
-        setIsCalculating(false)
-      }
-    }
-
-    calculateConversion()
-  }, [amount, fromWallet, toWallet])
-
-  const handleTransfer = () => {
-    if (!fromWalletId || !toWalletId || !amount || !convertedAmount) return
-    if (fromWalletId === toWalletId) {
-      alert("Cannot transfer to the same wallet")
+    if (!amount || !fromWallet || !toWallet || amount <= 0) {
+      setConverted(null)
+      setRate(null)
       return
     }
+    let cancelled = false
+    setCalculating(true)
+    convertWithLiveRate(amount, fromWallet.currency, toWallet.currency).then(({ convertedAmount, rate: r }) => {
+      if (!cancelled) { setConverted(convertedAmount); setRate(r) }
+    }).catch(console.error).finally(() => { if (!cancelled) setCalculating(false) })
+    return () => { cancelled = true }
+  }, [amount, fromId, toId])
 
-    const transferAmount = Number.parseFloat(amount)
-    if (transferAmount <= 0) {
-      alert("Amount must be greater than 0")
+  const handleTransfer = async () => {
+    if (!fromId || !toId || !amount || converted === null) return
+    if (fromId === toId) { setError("Cannot transfer to the same wallet."); return }
+    if (amount <= 0) { setError("Amount must be greater than 0."); return }
+    if (fromWallet && amount > fromWallet.balance) { setError("Insufficient balance in source wallet."); return }
+
+    if (fromWallet?.locked) {
+      Modal.confirm({
+        title: <span><LockOutlined className="text-amber-500 mr-2" />Locked wallet</span>,
+        content: `"${fromWallet.name}" is locked. Confirm to proceed with this transfer?`,
+        okText: "Proceed",
+        cancelText: "Cancel",
+        onOk: () => doTransfer(),
+      })
       return
     }
+    await doTransfer()
+  }
 
-    if (fromWallet && transferAmount > fromWallet.balance) {
-      alert("Insufficient balance in source wallet")
-      return
+  const doTransfer = async () => {
+    if (!fromId || !toId || !amount || converted === null) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await onTransfer(fromId, toId, amount, converted, note)
+      setFromId(""); setToId(""); setAmount(null); setNote(""); setConverted(null); setRate(null)
+    } catch {
+      setError("Transfer failed. Please try again.")
+    } finally {
+      setSubmitting(false)
     }
-
-    onTransfer(fromWalletId, toWalletId, transferAmount, convertedAmount, note)
-
-    // Reset form
-    setAmount("")
-    setNote("")
-    setConvertedAmount(null)
-    setExchangeRate(null)
   }
 
   const refreshRate = async () => {
     if (!amount || !fromWallet || !toWallet) return
-
-    setIsCalculating(true)
+    setCalculating(true)
     try {
-      const { convertedAmount: converted, rate } = await convertWithLiveRate(
-        Number.parseFloat(amount),
-        fromWallet.currency,
-        toWallet.currency,
-      )
-      setConvertedAmount(converted)
-      setExchangeRate(rate)
-      setLastUpdated(new Date())
-    } catch (error) {
-      console.error("[v0] Error refreshing rate:", error)
-    } finally {
-      setIsCalculating(false)
-    }
+      const { convertedAmount, rate: r } = await convertWithLiveRate(amount, fromWallet.currency, toWallet.currency)
+      setConverted(convertedAmount); setRate(r)
+    } finally { setCalculating(false) }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ArrowLeftRight className="h-5 w-5" />
-          Transfer Between Wallets
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="from-wallet">From Wallet</Label>
-            <Select value={fromWalletId} onValueChange={setFromWalletId}>
-              <SelectTrigger id="from-wallet">
-                <SelectValue placeholder="Select source wallet" />
-              </SelectTrigger>
-              <SelectContent>
-                {wallets.map((wallet) => (
-                  <SelectItem key={wallet.id} value={wallet.id}>
-                    <div className="flex flex-col">
-                      <span>{wallet.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatCurrency(wallet.balance, wallet.currency)}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fromWallet && (
-              <p className="text-sm text-muted-foreground">
-                Available: {formatCurrency(fromWallet.balance, fromWallet.currency)}
-              </p>
-            )}
+    <Card title={<span><SwapOutlined className="mr-2" />Transfer Between Wallets</span>}>
+      <div className="space-y-4 max-w-lg">
+        {error && <Alert message={error} type="error" showIcon closable onClose={() => setError(null)} />}
+        <Form layout="vertical">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Form.Item label="From Wallet">
+              <Select
+                value={fromId || undefined}
+                onChange={setFromId}
+                placeholder="Select source wallet"
+                options={wallets.map((w) => ({ value: w.id, label: w.name + " — " + formatCurrency(w.balance, w.currency) }))}
+              />
+              {fromWallet && <p className="text-xs text-gray-400 mt-1">Available: {formatCurrency(fromWallet.balance, fromWallet.currency)}</p>}
+            </Form.Item>
+            <Form.Item label="To Wallet">
+              <Select
+                value={toId || undefined}
+                onChange={setToId}
+                placeholder="Select destination wallet"
+                options={wallets.filter((w) => w.id !== fromId).map((w) => ({ value: w.id, label: w.name + " — " + formatCurrency(w.balance, w.currency) }))}
+              />
+            </Form.Item>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="to-wallet">To Wallet</Label>
-            <Select value={toWalletId} onValueChange={setToWalletId}>
-              <SelectTrigger id="to-wallet">
-                <SelectValue placeholder="Select destination wallet" />
-              </SelectTrigger>
-              <SelectContent>
-                {wallets
-                  .filter((w) => w.id !== fromWalletId)
-                  .map((wallet) => (
-                    <SelectItem key={wallet.id} value={wallet.id}>
-                      <div className="flex flex-col">
-                        <span>{wallet.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatCurrency(wallet.balance, wallet.currency)}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            {toWallet && (
-              <p className="text-sm text-muted-foreground">
-                Current: {formatCurrency(toWallet.balance, toWallet.currency)}
-              </p>
-            )}
-          </div>
-        </div>
+          <Form.Item label={"Amount" + (fromWallet ? " (" + fromWallet.currency + ")" : "")}>
+            <InputNumber
+              className="w-full"
+              value={amount}
+              onChange={(v) => setAmount(v)}
+              min={0}
+              step={fromWallet?.currency === "KHR" ? 1 : 0.01}
+              placeholder={fromWallet?.currency === "KHR" ? "0" : "0.00"}
+            />
+          </Form.Item>
 
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount {fromWallet && `(${fromWallet.currency})`}</Label>
-          <Input
-            id="amount"
-            type="number"
-            step={fromWallet?.currency === "KHR" ? "1" : "0.01"}
-            placeholder={fromWallet?.currency === "KHR" ? "0" : "0.00"}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          {amount && fromWallet && (
-            <p className="text-sm font-medium">{formatCurrency(Number.parseFloat(amount), fromWallet.currency)}</p>
-          )}
-        </div>
-
-        {fromWallet && toWallet && fromWallet.currency !== toWallet.currency && convertedAmount !== null && (
-          <div className="p-4 bg-muted rounded-lg space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Converted Amount:</span>
-              <Button variant="ghost" size="sm" onClick={refreshRate} disabled={isCalculating} className="h-6 px-2">
-                <RefreshCw className={`h-3 w-3 ${isCalculating ? "animate-spin" : ""}`} />
-              </Button>
-            </div>
-            <div className="text-lg font-bold text-primary">{formatCurrency(convertedAmount, toWallet.currency)}</div>
-            {exchangeRate && (
-              <div className="text-xs text-muted-foreground">
-                Rate: 1 {fromWallet.currency} = {exchangeRate.toFixed(4)} {toWallet.currency}
+          {fromWallet && toWallet && converted !== null && (
+            <div className="p-3 bg-gray-50 rounded-lg mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm text-gray-500">You will receive:</span>
+                <Button size="small" type="text" icon={<ReloadOutlined spin={calculating} />} onClick={refreshRate} disabled={calculating} />
               </div>
-            )}
-            {lastUpdated && (
-              <div className="text-xs text-muted-foreground">Updated: {lastUpdated.toLocaleTimeString()}</div>
-            )}
-          </div>
-        )}
-
-        {fromWallet && toWallet && fromWallet.currency === toWallet.currency && amount && (
-          <div className="p-4 bg-muted rounded-lg">
-            <div className="text-sm text-muted-foreground">Same currency - no conversion needed</div>
-            <div className="text-lg font-bold text-primary">
-              {formatCurrency(Number.parseFloat(amount), toWallet.currency)}
+              <p className="text-xl font-bold text-indigo-600">{formatCurrency(converted, toWallet.currency)}</p>
+              {rate && fromWallet.currency !== toWallet.currency && (
+                <p className="text-xs text-gray-400">Rate: 1 {fromWallet.currency} = {rate.toFixed(4)} {toWallet.currency}</p>
+              )}
+              {fromWallet.currency === toWallet.currency && (
+                <p className="text-xs text-gray-400">Same currency — no conversion needed.</p>
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="space-y-2">
-          <Label htmlFor="note">Note (Optional)</Label>
-          <Textarea
-            id="note"
-            placeholder="Add a note about this transfer..."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={2}
-          />
-        </div>
+          <Form.Item label="Note (optional)">
+            <input
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+              placeholder="Add a note about this transfer…"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </Form.Item>
 
-        <Button
-          onClick={handleTransfer}
-          disabled={!fromWalletId || !toWalletId || !amount || isCalculating}
-          className="w-full"
-        >
-          {isCalculating ? "Calculating..." : "Transfer"}
-        </Button>
-      </CardContent>
+          <Button
+            type="primary"
+            size="large"
+            className="w-full"
+            onClick={handleTransfer}
+            loading={submitting}
+            disabled={!fromId || !toId || !amount || calculating || converted === null}
+          >
+            {calculating ? "Calculating…" : "Transfer"}
+          </Button>
+        </Form>
+      </div>
     </Card>
   )
 }

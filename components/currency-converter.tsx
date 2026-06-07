@@ -1,94 +1,42 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowRightLeft } from "lucide-react"
+import { Card, InputNumber, Select, Button } from "antd"
+import { SwapOutlined } from "@ant-design/icons"
 import { currencies, convertCurrency, formatCurrency } from "../data/currency-data"
 
 export function CurrencyConverter() {
-  const [amount, setAmount] = useState("")
-  const [fromCurrency, setFromCurrency] = useState("USD")
-  const [toCurrency, setToCurrency] = useState("KHR")
+  const [amount, setAmount] = useState<number | null>(null)
+  const [from, setFrom] = useState("USD")
+  const [to, setTo] = useState("KHR")
 
-  const convertedAmount = amount ? convertCurrency(Number.parseFloat(amount), fromCurrency, toCurrency) : 0
-
-  const swapCurrencies = () => {
-    setFromCurrency(toCurrency)
-    setToCurrency(fromCurrency)
-  }
+  const result = amount ? convertCurrency(amount, from, to) : null
+  const options = currencies.map((c) => ({ value: c.code, label: c.symbol + " " + c.code + " - " + c.name }))
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ArrowRightLeft className="h-5 w-5" />
-          Currency Converter
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              placeholder="Enter amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>From</Label>
-            <Select value={fromCurrency} onValueChange={setFromCurrency}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies.map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.code} - {currency.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>To</Label>
-            <Select value={toCurrency} onValueChange={setToCurrency}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies.map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.code} - {currency.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="space-y-4 max-w-md mt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Amount</label>
+          <InputNumber className="w-full" min={0} step={0.01} placeholder="0.00" value={amount} onChange={(v) => setAmount(v)} />
         </div>
-
-        {amount && (
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <div className="text-lg">
-              <span className="font-medium">{formatCurrency(Number.parseFloat(amount), fromCurrency)}</span>
-              <span className="mx-2">=</span>
-              <span className="font-bold text-primary">{formatCurrency(convertedAmount, toCurrency)}</span>
-            </div>
-            <div className="text-sm text-muted-foreground mt-1">
-              Exchange rate: 1 {fromCurrency} = {convertCurrency(1, fromCurrency, toCurrency).toLocaleString()}{" "}
-              {toCurrency}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">From</label>
+          <Select className="w-full" value={from} onChange={setFrom} options={options} />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">To</label>
+          <Select className="w-full" value={to} onChange={setTo} options={options} />
+        </div>
+      </div>
+      <Button type="text" size="small" icon={<SwapOutlined />} onClick={() => { setFrom(to); setTo(from) }}>Swap currencies</Button>
+      {result !== null && (
+        <div className="p-4 bg-indigo-50 rounded-xl text-center">
+          <p className="text-gray-500 text-sm">{formatCurrency(amount!, from)}</p>
+          <p className="text-2xl font-bold text-indigo-600 mt-1">{formatCurrency(result, to)}</p>
+          <p className="text-xs text-gray-400 mt-1">1 {from} = {convertCurrency(1, from, to).toLocaleString()} {to}</p>
+        </div>
+      )}
+    </div>
   )
 }

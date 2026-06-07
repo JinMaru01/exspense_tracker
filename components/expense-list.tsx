@@ -1,313 +1,251 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Search, Trash2, X } from "lucide-react"
+import { Table, Input, Select, Button, Tag, Card, Space, Popconfirm, DatePicker } from "antd"
+import type { ColumnsType } from "antd/es/table"
+import { SearchOutlined, DeleteOutlined, ClearOutlined } from "@ant-design/icons"
 import type { Expense, Wallet } from "../types/expense"
 import { defaultCategories } from "../data/default-data"
 import { ExpenseForm } from "./expense-form"
 import { DownloadButton } from "./download-button"
 import { formatCurrency } from "../data/currency-data"
+import dayjs from "dayjs"
 
 interface ExpenseListProps {
   expenses: Expense[]
   wallets: Wallet[]
-  onUpdateExpense: (id: string, expense: Omit<Expense, "id">) => void
-  onDeleteExpense: (id: string) => void
+  onUpdateExpense: (id: string, expense: Omit<Expense, "id">) => Promise<string | null | void> | string | null | void
+  onDeleteExpense: (id: string) => Promise<void> | void
+}
+
+const typeColor: Record<string, string> = {
+  income: "green",
+  expense: "red",
+  transfer: "blue",
+}
+const typeLabel: Record<string, string> = {
+  income: "Income",
+  expense: "Expense",
+  transfer: "Transfer",
 }
 
 export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpense }: ExpenseListProps) {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [walletFilter, setWalletFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
 
-  const getMonthDateRange = () => {
-    const now = new Date()
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    return {
-      start: firstDay.toISOString().split("T")[0],
-      end: lastDay.toISOString().split("T")[0],
+  const thisMonth = [dayjs().startOf("month"), dayjs().endOf("month")] as [dayjs.Dayjs, dayjs.Dayjs]
+  const lastMonth = [
+    dayjs().subtract(1, "month").startOf("month"),
+    dayjs().subtract(1, "month").endOf("month"),
+  ] as [dayjs.Dayjs, dayjs.Dayjs]
+
+  const isRange = (r: [dayjs.Dayjs, dayjs.Dayjs]) =>
+    dateRange && dateRange[0]?.isSame(r[0], "day") && dateRange[1]?.isSame(r[1], "day")
+
+  const getCategoryColor = (name: string) =>
+    defaultCategories.find((c) => c.name === name)?.color ?? "#6b7280"
+  const getCategoryIcon = (name: string) =>
+    defaultCategories.find((c) => c.name === name)?.icon ?? "💰"
+
+  const filtered = expenses.filter((e) => {
+    const matchSearch =
+      e.description.toLowerCase().includes(search.toLowerCase()) ||
+      e.category.toLowerCase().includes(search.toLowerCase())
+    const matchCat = categoryFilter === "all" || e.category === categoryFilter
+    const matchWallet = walletFilter === "all" || e.wallet === walletFilter
+    const matchType = typeFilter === "all" || (e.type ?? "expense") === typeFilter
+    let matchDate = true
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const d = dayjs(e.date)
+      matchDate = !d.isBefore(dateRange[0], "day") && !d.isAfter(dateRange[1], "day")
     }
-  }
-
-  const getLastMonthDateRange = () => {
-    const now = new Date()
-    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
-    return {
-      start: firstDay.toISOString().split("T")[0],
-      end: lastDay.toISOString().split("T")[0],
-    }
-  }
-
-  const filteredExpenses = expenses.filter((expense) => {
-    const matchesSearch =
-      expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.category.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter
-    const matchesWallet = walletFilter === "all" || expense.wallet === walletFilter
-    const matchesType = typeFilter === "all" || (expense.type || "expense") === typeFilter
-
-    let matchesDateRange = true
-    if (startDate || endDate) {
-      const expenseDate = expense.date
-      if (startDate) {
-        const start = new Date(startDate)
-        start.setHours(0, 0, 0, 0)
-        matchesDateRange = matchesDateRange && expenseDate >= start
-      }
-      if (endDate) {
-        const end = new Date(endDate)
-        end.setHours(23, 59, 59, 999)
-        matchesDateRange = matchesDateRange && expenseDate <= end
-      }
-    }
-
-    return matchesSearch && matchesCategory && matchesWallet && matchesType && matchesDateRange
+    return matchSearch && matchCat && matchWallet && matchType && matchDate
   })
 
-  const getCategoryIcon = (categoryName: string) => {
-    const category = defaultCategories.find((cat) => cat.name === categoryName)
-    return category?.icon || "💰"
-  }
-
-  const getCategoryColor = (categoryName: string) => {
-    const category = defaultCategories.find((cat) => cat.name === categoryName)
-    return category?.color || "#6b7280"
-  }
+  const columns: ColumnsType<Expense> = [
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      width: 100,
+      render: (d: Date) => (
+        <span className="text-xs text-gray-600 whitespace-nowrap">
+          {dayjs(d).format("DD/MM/YYYY")}
+        </span>
+      ),
+      sorter: (a: Expense, b: Expense) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      width: 90,
+      render: (type: string) => (
+        <Tag color={typeColor[type ?? "expense"]} className="text-xs">
+          {typeLabel[type ?? "expense"]}
+        </Tag>
+      ),
+    },
+    {
+      title: "Category",
+      dataIndex: "category",
+      key: "category",
+      width: 140,
+      responsive: ["sm"],
+      render: (cat: string) => (
+        <Tag
+          className="text-xs"
+          style={{
+            background: getCategoryColor(cat) + "20",
+            color: getCategoryColor(cat),
+            border: "1px solid " + getCategoryColor(cat) + "40",
+          }}
+        >
+          {getCategoryIcon(cat)} {cat}
+        </Tag>
+      ),
+    },
+    {
+      title: "Description",
+      dataIndex: "description",
+      key: "description",
+      ellipsis: true,
+      render: (d: string) => <span className="text-xs text-gray-700">{d || "—"}</span>,
+    },
+    {
+      title: "Wallet",
+      dataIndex: "wallet",
+      key: "wallet",
+      width: 120,
+      responsive: ["md"],
+      render: (w: string, record: Expense) => (
+        <Tag className="text-xs">{w} ({record.currency})</Tag>
+      ),
+    },
+    {
+      title: "Amount",
+      dataIndex: "amount",
+      key: "amount",
+      width: 110,
+      align: "right" as const,
+      render: (amount: number, record: Expense) => (
+        <span
+          className="font-semibold text-xs whitespace-nowrap"
+          style={{ color: record.type === "income" ? "#16a34a" : record.type === "transfer" ? "#3b82f6" : "#ef4444" }}
+        >
+          {record.type === "income" ? "+" : record.type === "transfer" ? "" : "-"}
+          {formatCurrency(amount, record.currency)}
+        </span>
+      ),
+      sorter: (a: Expense, b: Expense) => a.amount - b.amount,
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 70,
+      render: (_: unknown, record: Expense) => (
+        <Space size={2}>
+          <ExpenseForm
+            expense={record}
+            wallets={wallets}
+            onSubmit={(updated) => onUpdateExpense(record.id, updated)}
+          />
+          <Popconfirm
+            title="Delete this transaction?"
+            onConfirm={() => onDeleteExpense(record.id)}
+            okText="Delete"
+            okButtonProps={{ danger: true }}
+            cancelText="Cancel"
+          >
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ]
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <CardTitle className="text-lg sm:text-xl">Recent Expenses</CardTitle>
-          <DownloadButton
-            expenses={expenses}
-            filteredExpenses={filteredExpenses}
-            searchTerm={searchTerm}
-            categoryFilter={categoryFilter}
-            walletFilter={walletFilter}
-            showFilteredOption={true}
+    <Card
+      title="Transactions"
+      extra={
+        <DownloadButton
+          expenses={expenses}
+          filteredExpenses={filtered}
+          searchTerm={search}
+          categoryFilter={categoryFilter}
+          walletFilter={walletFilter}
+          showFilteredOption
+        />
+      }
+    >
+      <div className="space-y-3 mb-4">
+        <Input
+          prefix={<SearchOutlined className="text-gray-400" />}
+          placeholder="Search by description or category…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          allowClear
+        />
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={typeFilter}
+            onChange={setTypeFilter}
+            style={{ minWidth: 130 }}
+            options={[
+              { value: "all", label: "All Types" },
+              { value: "expense", label: "Expenses" },
+              { value: "income", label: "Income" },
+              { value: "transfer", label: "Transfers" },
+            ]}
+          />
+          <Select
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            style={{ minWidth: 160 }}
+            options={[
+              { value: "all", label: "All Categories" },
+              ...defaultCategories.map((c) => ({ value: c.name, label: c.icon + " " + c.name })),
+            ]}
+          />
+          <Select
+            value={walletFilter}
+            onChange={setWalletFilter}
+            style={{ minWidth: 150 }}
+            options={[
+              { value: "all", label: "All Wallets" },
+              ...wallets.map((w) => ({ value: w.name, label: w.name })),
+            ]}
           />
         </div>
-        <div className="flex flex-col gap-3 sm:gap-4 pt-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search expenses..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="expense">💸 Expenses</SelectItem>
-                <SelectItem value="income">💰 Income</SelectItem>
-                <SelectItem value="transfer">🔄 Transfers</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {defaultCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
-                    {category.icon} {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={walletFilter} onValueChange={setWalletFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by wallet" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Wallets</SelectItem>
-                {wallets.map((wallet) => (
-                  <SelectItem key={wallet.id} value={wallet.name}>
-                    {wallet.name} ({wallet.type})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="border rounded-lg p-3 space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={!startDate && !endDate ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setStartDate("")
-                  setEndDate("")
-                }}
-              >
-                All Time
-              </Button>
-              <Button
-                variant={
-                  startDate === getMonthDateRange().start && endDate === getMonthDateRange().end ? "default" : "outline"
-                }
-                size="sm"
-                onClick={() => {
-                  const range = getMonthDateRange()
-                  setStartDate(range.start)
-                  setEndDate(range.end)
-                }}
-              >
-                This Month
-              </Button>
-              <Button
-                variant={
-                  startDate === getLastMonthDateRange().start && endDate === getLastMonthDateRange().end
-                    ? "default"
-                    : "outline"
-                }
-                size="sm"
-                onClick={() => {
-                  const range = getLastMonthDateRange()
-                  setStartDate(range.start)
-                  setEndDate(range.end)
-                }}
-              >
-                Last Month
-              </Button>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-              <div className="w-full sm:w-auto">
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Start Date</label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              <div className="w-full sm:w-auto">
-                <label className="text-xs font-medium text-muted-foreground block mb-1">End Date</label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full" />
-              </div>
-              {(startDate || endDate) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setStartDate("")
-                    setEndDate("")
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="small" type={!dateRange ? "primary" : "default"} onClick={() => setDateRange(null)}>All Time</Button>
+          <Button size="small" type={isRange(thisMonth) ? "primary" : "default"} onClick={() => setDateRange(thisMonth)}>This Month</Button>
+          <Button size="small" type={isRange(lastMonth) ? "primary" : "default"} onClick={() => setDateRange(lastMonth)}>Last Month</Button>
+          <DatePicker.RangePicker
+            size="small"
+            value={dateRange as [dayjs.Dayjs, dayjs.Dayjs] | null}
+            onChange={(v) => setDateRange(v)}
+            format="DD/MM/YYYY"
+            className="flex-1"
+          />
+          {dateRange && (
+            <Button size="small" icon={<ClearOutlined />} onClick={() => setDateRange(null)} />
+          )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[100px]">Date</TableHead>
-                <TableHead className="min-w-[100px]">Type</TableHead>
-                <TableHead className="min-w-[120px]">Category</TableHead>
-                <TableHead className="min-w-[150px]">Description</TableHead>
-                <TableHead className="min-w-[100px]">Wallet</TableHead>
-                <TableHead className="text-right min-w-[100px]">Amount</TableHead>
-                <TableHead className="text-right min-w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredExpenses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No expenses found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredExpenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="text-xs sm:text-sm">{expense.date.toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs whitespace-nowrap font-medium ${
-                          expense.type === "income"
-                            ? "bg-green-50 text-green-700 border-green-300"
-                            : expense.type === "transfer"
-                              ? "bg-blue-50 text-blue-700 border-blue-300"
-                              : "bg-red-50 text-red-700 border-red-300"
-                        }`}
-                      >
-                        {expense.type === "income" ? "💰 Income" : expense.type === "transfer" ? "🔄 Transfer" : "💸 Expense"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className="text-xs whitespace-nowrap"
-                        style={{
-                          backgroundColor: `${getCategoryColor(expense.category)}20`,
-                          color: getCategoryColor(expense.category),
-                          border: `1px solid ${getCategoryColor(expense.category)}40`,
-                        }}
-                      >
-                        {getCategoryIcon(expense.category)} {expense.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-xs sm:text-sm">
-                      {expense.description || "No description"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs whitespace-nowrap">
-                        {expense.wallet} ({expense.currency})
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-xs sm:text-sm">
-                      {formatCurrency(expense.amount, expense.currency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1 sm:gap-2">
-                        <ExpenseForm
-                          expense={expense}
-                          wallets={wallets}
-                          onSubmit={(updatedExpense) => onUpdateExpense(expense.id, updatedExpense)}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDeleteExpense(expense.id)}
-                          className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+      </div>
+
+      <Table
+        dataSource={filtered}
+        columns={columns}
+        rowKey="id"
+        scroll={{ x: true }}
+        pagination={{ pageSize: 20, showSizeChanger: false, showTotal: (t) => `${t} records` }}
+        size="small"
+        locale={{ emptyText: "No transactions found." }}
+      />
     </Card>
   )
 }

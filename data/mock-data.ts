@@ -1,41 +1,11 @@
 import type { Wallet, Category } from "../types/expense"
 
 export const mockWallets: Wallet[] = [
-  {
-    id: "1", 
-    name: "Cash (Riel)",
-    balance: 6150000,
-    currency: "KHR",
-    exchangeRate: 4100,
-  },
-  {
-    id: "2",
-    name: "Cash (Dollar)",
-    balance: 500,
-    currency: "USD",
-    exchangeRate: 1,
-  },
-  {
-    id: "3",
-    name: "ABA Bank (USD)",
-    balance: 2500,
-    currency: "USD",
-    exchangeRate: 1,
-  },
-  {
-    id: "4",
-    name: "ACLEDA Bank (KHR)",
-    balance: 12300000,
-    currency: "KHR",
-    exchangeRate: 4100,
-  },
-  {
-    id: "5",
-    name: "Credit Card (USD)",
-    balance: 1800,
-    currency: "USD",
-    exchangeRate: 1,
-  },
+  { id: "1", name: "Cash (Riel)", balance: 6150000, currency: "KHR", type: "cash", exchangeRate: 4100 },
+  { id: "2", name: "Cash (Dollar)", balance: 500, currency: "USD", type: "cash", exchangeRate: 1 },
+  { id: "3", name: "ABA Bank (USD)", balance: 2500, currency: "USD", type: "bank", exchangeRate: 1 },
+  { id: "4", name: "ACLEDA Bank (KHR)", balance: 12300000, currency: "KHR", type: "bank", exchangeRate: 4100 },
+  { id: "5", name: "Credit Card (USD)", balance: 1800, currency: "USD", type: "credit", exchangeRate: 1 },
 ]
 
 export const mockCategories: Category[] = [
