@@ -159,7 +159,7 @@ export function WalletManager({
               title="Portfolio (USD)"
               value={totalPortfolioUSD.toFixed(2)}
               prefix="$"
-              valueStyle={{ color: "#6366f1" }}
+              styles={{ content: { color: "#6366f1" } }}
             />
           </Card>
         </Col>
