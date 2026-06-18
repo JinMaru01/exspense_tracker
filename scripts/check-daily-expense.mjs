@@ -26,7 +26,8 @@ if (snapshot.empty) {
   const message =
     `📝 *Expense Reminder*\n\n` +
     `You haven't logged any expense today (${now.toDateString()}).\n\n` +
-    `Don't forget to record your transactions! 💰`;
+    `Don't forget to record your transactions! 💰\n\n` +
+    `👉 [Open Expense Tracker](https://jinmaru01.github.io/exspense_tracker/)`;
 
   const res = await fetch(
     `https://api.telegram.org/bot${botToken}/sendMessage`,
