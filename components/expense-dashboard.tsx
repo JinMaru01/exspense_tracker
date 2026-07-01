@@ -8,6 +8,7 @@ import { defaultCategories } from "../data/default-data"
 import { DownloadButton } from "./download-button"
 import { CurrencyConverter } from "./currency-converter"
 import { formatCurrency, convertCurrency } from "../data/currency-data"
+import { useExchangeRates } from "../hooks/use-exchange-rates"
 import dayjs from "dayjs"
 
 interface ExpenseDashboardProps {
@@ -18,6 +19,7 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
   const [displayCurrency, setDisplayCurrency] = useState<"USD" | "KHR">("USD")
   const [filterType, setFilterType] = useState<"all" | "thisMonth" | "lastMonth" | "custom">("all")
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
+  const ratesVersion = useExchangeRates()
 
   const filtered = useMemo(() => {
     const today = dayjs()
@@ -45,15 +47,15 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
 
   const totalIncome = useMemo(
     () => onlyIncome.reduce((s, e) => s + convertCurrency(e.amount, e.currency, displayCurrency), 0),
-    [onlyIncome, displayCurrency],
+    [onlyIncome, displayCurrency, ratesVersion],
   )
   const totalExpenses = useMemo(
     () => onlyExpenses.reduce((s, e) => s + convertCurrency(e.amount, e.currency, displayCurrency), 0),
-    [onlyExpenses, displayCurrency],
+    [onlyExpenses, displayCurrency, ratesVersion],
   )
   const totalTransfers = useMemo(
     () => onlyTransfers.reduce((s, e) => s + convertCurrency(e.amount, e.currency, displayCurrency), 0),
-    [onlyTransfers, displayCurrency],
+    [onlyTransfers, displayCurrency, ratesVersion],
   )
   const net = totalIncome - totalExpenses
 
@@ -71,7 +73,7 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
       }))
       .filter((c) => c.total > 0)
       .sort((a, b) => b.total - a.total)
-  }, [onlyExpenses, displayCurrency])
+  }, [onlyExpenses, displayCurrency, ratesVersion])
 
   const netColor = net >= 0 ? "#16a34a" : "#ef4444"
 

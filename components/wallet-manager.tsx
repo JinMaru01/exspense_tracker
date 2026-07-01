@@ -7,6 +7,7 @@ import type { Wallet as WalletType, Expense } from "../types/expense"
 import { WalletForm } from "./wallet-form"
 import { BalanceAdjustment } from "./balance-adjustment"
 import { formatCurrency, convertCurrency } from "../data/currency-data"
+import { useExchangeRates } from "../hooks/use-exchange-rates"
 
 interface WalletManagerProps {
   wallets: WalletType[]
@@ -20,6 +21,7 @@ interface WalletManagerProps {
 export function WalletManager({
   wallets, expenses, onAddWallet, onUpdateWallet, onDeleteWallet, onAdjustBalance,
 }: WalletManagerProps) {
+  useExchangeRates() // re-render with live rates once loaded
   const totalPortfolioUSD = wallets.reduce(
     (sum, w) => sum + convertCurrency(w.balance, w.currency, "USD"), 0,
   )
