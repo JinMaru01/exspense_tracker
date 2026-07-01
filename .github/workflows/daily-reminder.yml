@@ -8,6 +8,7 @@ on:
 jobs:
   check-and-notify:
     runs-on: ubuntu-latest
+    environment: github-pages
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
