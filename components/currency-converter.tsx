@@ -4,11 +4,13 @@ import { useState } from "react"
 import { Card, InputNumber, Select, Button } from "antd"
 import { SwapOutlined } from "@ant-design/icons"
 import { currencies, convertCurrency, formatCurrency } from "../data/currency-data"
+import { useExchangeRates } from "../hooks/use-exchange-rates"
 
 export function CurrencyConverter() {
   const [amount, setAmount] = useState<number | null>(null)
   const [from, setFrom] = useState("USD")
   const [to, setTo] = useState("KHR")
+  useExchangeRates() // refresh with live rates once loaded
 
   const result = amount ? convertCurrency(amount, from, to) : null
   const options = currencies.map((c) => ({ value: c.code, label: c.symbol + " " + c.code + " - " + c.name }))

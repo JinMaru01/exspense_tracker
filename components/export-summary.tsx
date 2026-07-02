@@ -13,6 +13,7 @@ import {
 import type { Expense, Wallet, Subscription } from "../types/expense"
 import { defaultCategories } from "../data/default-data"
 import { formatCurrency, convertCurrency } from "../data/currency-data"
+import { useExchangeRates } from "../hooks/use-exchange-rates"
 import { exportToCSV } from "../utils/csv-export"
 import dayjs from "dayjs"
 import type { ColumnsType } from "antd/es/table"
@@ -31,6 +32,7 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
   const [currency, setCurrency] = useState<"USD" | "KHR">("USD")
   const [pdfLoading, setPdfLoading] = useState(false)
+  const ratesVersion = useExchangeRates()
   const reportRef = useRef<HTMLDivElement>(null)
 
   const filtered = useMemo(() => {
@@ -53,9 +55,9 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
 
   const only = (type: "expense" | "income" | "transfer") => filtered.filter((e) => (e.type ?? "expense") === type)
 
-  const totalIncome = useMemo(() => only("income").reduce((s, e) => s + convertCurrency(e.amount, e.currency, currency), 0), [filtered, currency])
-  const totalExpenses = useMemo(() => only("expense").reduce((s, e) => s + convertCurrency(e.amount, e.currency, currency), 0), [filtered, currency])
-  const totalTransfers = useMemo(() => only("transfer").reduce((s, e) => s + convertCurrency(e.amount, e.currency, currency), 0), [filtered, currency])
+  const totalIncome = useMemo(() => only("income").reduce((s, e) => s + convertCurrency(e.amount, e.currency, currency), 0), [filtered, currency, ratesVersion])
+  const totalExpenses = useMemo(() => only("expense").reduce((s, e) => s + convertCurrency(e.amount, e.currency, currency), 0), [filtered, currency, ratesVersion])
+  const totalTransfers = useMemo(() => only("transfer").reduce((s, e) => s + convertCurrency(e.amount, e.currency, currency), 0), [filtered, currency, ratesVersion])
   const net = totalIncome - totalExpenses
 
   const dates = filtered.map((e) => new Date(e.date).getTime())
@@ -72,7 +74,7 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
       .map((cat) => ({ ...cat, total: totals[cat.name] ?? 0, pct: total > 0 ? ((totals[cat.name] ?? 0) / total) * 100 : 0 }))
       .filter((c) => c.total > 0)
       .sort((a, b) => b.total - a.total)
-  }, [filtered, currency])
+  }, [filtered, currency, ratesVersion])
 
   const monthlyData = useMemo(() => {
     const map: Record<string, { month: string; sortKey: number; income: number; expense: number }> = {}
@@ -86,7 +88,7 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
       else if ((e.type ?? "expense") === "expense") map[key].expense += amt
     }
     return Object.values(map).sort((a, b) => a.sortKey - b.sortKey).slice(-12)
-  }, [filtered, currency])
+  }, [filtered, currency, ratesVersion])
 
   const walletRows = useMemo(() => wallets.map((w) => {
     const wExp = only("expense").filter((e) => e.wallet === w.name)
