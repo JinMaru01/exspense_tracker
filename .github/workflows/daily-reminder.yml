@@ -1,8 +1,8 @@
 name: Daily Expense Reminder
 
 on:
-  # Daily reminder moved to Vercel Cron (telegram-bot/api/daily-check.js).
-  # Schedule disabled here to avoid duplicate notifications; manual run kept as a fallback.
+  schedule:
+    - cron: "0 14 * * *" # 9 PM UTC+7 (Cambodia time)
   workflow_dispatch:
 
 jobs:
