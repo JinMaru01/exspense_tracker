@@ -46,7 +46,7 @@ export function WalletManager({
       key: "name",
       render: (name: string) => (
         <span className="font-medium flex items-center gap-2">
-          <WalletOutlined className="text-indigo-400" />
+          <WalletOutlined className="text-lotus-400" />
           {name}
         </span>
       ),
@@ -161,7 +161,7 @@ export function WalletManager({
               title="Portfolio (USD)"
               value={totalPortfolioUSD.toFixed(2)}
               prefix="$"
-              styles={{ content: { color: "#6366f1" } }}
+              styles={{ content: { color: "#c5345d" } }}
             />
           </Card>
         </Col>

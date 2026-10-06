@@ -117,8 +117,8 @@ export function ExpenseForm({ expense, wallets, onSubmit, trigger }: ExpenseForm
   const defaultTrigger = expense ? (
     <Button type="text" size="small" icon={<EditOutlined />} />
   ) : (
-    <Button type="primary" icon={<PlusOutlined />} className="h-10">
-      <span className="hidden sm:inline ml-1">Add Expense</span>
+    <Button type="primary" icon={<PlusOutlined />} className="h-10" aria-label="Add Expense">
+      <span className="hidden sm:inline lg:hidden 2xl:inline ml-1">Add Expense</span>
     </Button>
   )
 

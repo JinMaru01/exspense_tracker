@@ -33,9 +33,9 @@ export function CurrencyConverter() {
       </div>
       <Button type="text" size="small" icon={<SwapOutlined />} onClick={() => { setFrom(to); setTo(from) }}>Swap currencies</Button>
       {result !== null && (
-        <div className="p-4 bg-indigo-50 rounded-xl text-center">
+        <div className="p-4 bg-lotus-50 rounded-xl text-center">
           <p className="text-gray-500 text-sm">{formatCurrency(amount!, from)}</p>
-          <p className="text-2xl font-bold text-indigo-600 mt-1">{formatCurrency(result, to)}</p>
+          <p className="text-2xl font-bold text-lotus-600 mt-1">{formatCurrency(result, to)}</p>
           <p className="text-xs text-gray-400 mt-1">1 {from} = {convertCurrency(1, from, to).toLocaleString()} {to}</p>
         </div>
       )}
