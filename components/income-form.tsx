@@ -83,10 +83,11 @@ export function IncomeForm({ wallets, onSubmit }: IncomeFormProps) {
     <>
       <Button
         onClick={() => setOpen(true)}
+        aria-label="Add Income"
         style={{ background: "#16a34a", borderColor: "#16a34a", color: "#fff", height: 40 }}
         icon={<ArrowUpOutlined />}
       >
-        <span className="hidden sm:inline ml-1">Add Income</span>
+        <span className="hidden sm:inline lg:hidden 2xl:inline ml-1">Add Income</span>
       </Button>
 
       <Modal

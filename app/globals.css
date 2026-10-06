@@ -3,8 +3,14 @@
 @tailwind utilities;
 
 body {
-  background-color: #f0f2f5;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #faf7f2;
+  color: #2e211b;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+::selection {
+  background-color: #f9d2dc;
+  color: #732138;
 }
 
 /* Ensure antd modals/selects render above everything */
@@ -24,11 +30,6 @@ body {
 @media (max-width: 430px) {
   /* Header action buttons: icon-only on small screens */
   .ant-btn .hidden { display: none !important; }
-
-  /* Tabs: fill full width, shrink text */
-  .expense-tabs .ant-tabs-nav-list { width: 100%; }
-  .expense-tabs .ant-tabs-tab { flex: 1; justify-content: center; padding: 6px 4px; }
-  .expense-tabs .ant-tabs-tab .anticon { margin-inline-end: 0 !important; }
 
   /* Cards: tighter padding */
   .ant-card-body { padding: 12px !important; }
@@ -69,11 +70,6 @@ body {
   background-color: #389e0d !important;
   border-color: #389e0d !important;
   color: #fff !important;
-}
-
-/* Safe bottom padding for iPhone home indicator */
-.pb-safe {
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 /* Green modal ok button */

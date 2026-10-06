@@ -39,8 +39,8 @@ export function ImportButton({ onImport, existingExpenses }: ImportButtonProps) 
   return (
     <>
       <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
-      <Button icon={<UploadOutlined />} onClick={() => fileInputRef.current?.click()} loading={loading} style={{ height: 40 }}>
-        <span className="hidden sm:inline">Import CSV</span>
+      <Button icon={<UploadOutlined />} onClick={() => fileInputRef.current?.click()} loading={loading} style={{ height: 40 }} aria-label="Import CSV">
+        <span className="hidden sm:inline lg:hidden 2xl:inline">Import CSV</span>
       </Button>
     </>
   )

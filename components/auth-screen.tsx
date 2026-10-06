@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button, Card, Typography, Alert } from "antd"
+import { Button, Typography, Alert } from "antd"
 import { signInWithPopup } from "firebase/auth"
 import { auth, googleProvider } from "../lib/firebase"
 
@@ -31,10 +31,10 @@ export function AuthScreen() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-      <Card className="w-full shadow-2xl" style={{ maxWidth: 400, borderRadius: 16 }}>
+    <div className="min-h-screen flex items-center justify-center bg-warmth-50 p-4">
+      <div className="w-full max-w-[400px] rounded-3xl border border-lotus-100 bg-gradient-to-br from-lotus-50 via-warmth-50 to-amber-50 p-6 shadow-lotus">
         <div className="text-center py-4">
-          <div className="text-6xl mb-4">💰</div>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-lotus-200 bg-lotus-50 text-4xl shadow-soft">🪷</div>
           <Typography.Title level={2} style={{ marginBottom: 4 }}>Expense Tracker</Typography.Title>
           <Typography.Text type="secondary" style={{ fontSize: 15 }}>
             Sign in to sync your data across all devices in real time.
@@ -58,7 +58,7 @@ export function AuthScreen() {
             Your data is private. Only you can see it.
           </Typography.Text>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

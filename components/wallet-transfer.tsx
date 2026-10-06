@@ -1,8 +1,8 @@
 ﻿"use client"
 
 import { useState, useEffect } from "react"
-import { Card, Form, InputNumber, Select, Button, Alert, Modal } from "antd"
-import { SwapOutlined, ReloadOutlined, LockOutlined } from "@ant-design/icons"
+import { Card, Row, Col, Form, Input, InputNumber, Select, Button, Alert, Modal } from "antd"
+import { SwapOutlined, ReloadOutlined, LockOutlined, ArrowDownOutlined } from "@ant-design/icons"
 import type { Wallet } from "../types/expense"
 import { formatCurrency } from "../data/currency-data"
 import { convertWithLiveRate } from "../lib/exchange-rate-api"
@@ -82,79 +82,89 @@ export function WalletTransfer({ wallets, onTransfer }: WalletTransferProps) {
     } finally { setCalculating(false) }
   }
 
+  const walletOptions = (list: Wallet[]) =>
+    list.map((w) => ({ value: w.id, label: w.name + " — " + formatCurrency(w.balance, w.currency) }))
+
   return (
-    <Card title={<span><SwapOutlined className="mr-2" />Transfer Between Wallets</span>}>
-      <div className="space-y-4 max-w-lg">
-        {error && <Alert message={error} type="error" showIcon closable onClose={() => setError(null)} />}
-        <Form layout="vertical">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Form.Item label="From Wallet">
-              <Select
-                value={fromId || undefined}
-                onChange={setFromId}
-                placeholder="Select source wallet"
-                options={wallets.map((w) => ({ value: w.id, label: w.name + " — " + formatCurrency(w.balance, w.currency) }))}
-              />
-              {fromWallet && <p className="text-xs text-gray-400 mt-1">Available: {formatCurrency(fromWallet.balance, fromWallet.currency)}</p>}
-            </Form.Item>
-            <Form.Item label="To Wallet">
-              <Select
-                value={toId || undefined}
-                onChange={setToId}
-                placeholder="Select destination wallet"
-                options={wallets.filter((w) => w.id !== fromId).map((w) => ({ value: w.id, label: w.name + " — " + formatCurrency(w.balance, w.currency) }))}
-              />
-            </Form.Item>
-          </div>
-
-          <Form.Item label={"Amount" + (fromWallet ? " (" + fromWallet.currency + ")" : "")}>
-            <InputNumber
-              className="w-full"
-              value={amount}
-              onChange={(v) => setAmount(v)}
-              min={0}
-              step={fromWallet?.currency === "KHR" ? 1 : 0.01}
-              placeholder={fromWallet?.currency === "KHR" ? "0" : "0.00"}
-            />
-          </Form.Item>
-
-          {fromWallet && toWallet && converted !== null && (
-            <div className="p-3 bg-gray-50 rounded-lg mb-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm text-gray-500">You will receive:</span>
-                <Button size="small" type="text" icon={<ReloadOutlined spin={calculating} />} onClick={refreshRate} disabled={calculating} />
-              </div>
-              <p className="text-xl font-bold text-indigo-600">{formatCurrency(converted, toWallet.currency)}</p>
-              {rate && fromWallet.currency !== toWallet.currency && (
-                <p className="text-xs text-gray-400">Rate: 1 {fromWallet.currency} = {rate.toFixed(4)} {toWallet.currency}</p>
-              )}
-              {fromWallet.currency === toWallet.currency && (
-                <p className="text-xs text-gray-400">Same currency — no conversion needed.</p>
-              )}
+    <Row gutter={[16, 16]}>
+      <Col xs={24} lg={14}>
+        <Card title={<span><SwapOutlined className="mr-2" />Transfer Between Wallets</span>} className="h-full">
+          {error && <Alert message={error} type="error" showIcon closable onClose={() => setError(null)} className="mb-4" />}
+          <Form layout="vertical">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+              <Form.Item label="From Wallet" extra={fromWallet && "Available: " + formatCurrency(fromWallet.balance, fromWallet.currency)}>
+                <Select value={fromId || undefined} onChange={setFromId} placeholder="Select source wallet" options={walletOptions(wallets)} />
+              </Form.Item>
+              <Form.Item label="To Wallet">
+                <Select value={toId || undefined} onChange={setToId} placeholder="Select destination wallet" options={walletOptions(wallets.filter((w) => w.id !== fromId))} />
+              </Form.Item>
             </div>
-          )}
 
-          <Form.Item label="Note (optional)">
-            <input
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-              placeholder="Add a note about this transfer…"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </Form.Item>
+            <Form.Item label={"Amount" + (fromWallet ? " (" + fromWallet.currency + ")" : "")}>
+              <InputNumber
+                className="w-full"
+                value={amount}
+                onChange={(v) => setAmount(v)}
+                min={0}
+                step={fromWallet?.currency === "KHR" ? 1 : 0.01}
+                placeholder={fromWallet?.currency === "KHR" ? "0" : "0.00"}
+              />
+            </Form.Item>
 
-          <Button
-            type="primary"
-            size="large"
-            className="w-full"
-            onClick={handleTransfer}
-            loading={submitting}
-            disabled={!fromId || !toId || !amount || calculating || converted === null}
-          >
-            {calculating ? "Calculating…" : "Transfer"}
-          </Button>
-        </Form>
-      </div>
-    </Card>
+            <Form.Item label="Note (optional)">
+              <Input placeholder="Add a note about this transfer…" value={note} onChange={(e) => setNote(e.target.value)} />
+            </Form.Item>
+
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<SwapOutlined />}
+              onClick={handleTransfer}
+              loading={submitting}
+              disabled={!fromId || !toId || !amount || calculating || converted === null}
+            >
+              {calculating ? "Calculating…" : "Transfer"}
+            </Button>
+          </Form>
+        </Card>
+      </Col>
+
+      <Col xs={24} lg={10}>
+        <Card
+          title="Preview"
+          className="h-full"
+          extra={converted !== null && <Button size="small" type="text" icon={<ReloadOutlined spin={calculating} />} onClick={refreshRate} disabled={calculating} />}
+        >
+          <div className="space-y-3">
+            {[{ label: "From", w: fromWallet }, { label: "To", w: toWallet }].map(({ label, w }, i) => (
+              <div key={label}>
+                {i === 1 && <div className="flex justify-center pb-3 text-lotus-400"><ArrowDownOutlined /></div>}
+                <div className="rounded-2xl bg-warmth-50 p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-warmth-500">{label}</p>
+                  <p className="font-medium text-warmth-950">{w ? w.name : "—"}</p>
+                  {w && <p className="text-xs text-warmth-500">Balance: {formatCurrency(w.balance, w.currency)}</p>}
+                </div>
+              </div>
+            ))}
+
+            <div className="rounded-2xl border border-lotus-100 bg-gradient-to-br from-lotus-50 via-warmth-50 to-amber-50 p-4 text-center">
+              <p className="text-xs text-warmth-500">You will receive</p>
+              <p className="text-2xl font-bold text-lotus-700">
+                {toWallet && converted !== null ? formatCurrency(converted, toWallet.currency) : "—"}
+              </p>
+              {fromWallet && toWallet && converted !== null && (
+                <p className="mt-1 text-xs text-warmth-500">
+                  {fromWallet.currency === toWallet.currency
+                    ? "Same currency — no conversion needed."
+                    : rate && `Rate: 1 ${fromWallet.currency} = ${rate.toFixed(4)} ${toWallet.currency}`}
+                </p>
+              )}
+              {converted === null && <p className="mt-1 text-xs text-warmth-500">Choose two wallets and an amount.</p>}
+            </div>
+          </div>
+        </Card>
+      </Col>
+    </Row>
   )
 }

@@ -126,7 +126,7 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
       const canvas = await html2canvas(reportRef.current, {
         scale: 2,
         useCORS: true,
-        backgroundColor: "#f0f2f5",
+        backgroundColor: "#faf7f2",
         scrollX: 0,
         scrollY: -window.scrollY,
         windowWidth: document.documentElement.offsetWidth,
@@ -201,7 +201,7 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
             { label: "Income", val: totalIncome, count: only("income").length, color: "#16a34a", icon: <ArrowUpOutlined />, sub: "Received" },
             { label: "Expenses", val: totalExpenses, count: only("expense").length, color: "#ef4444", icon: <ArrowDownOutlined />, sub: "Spent" },
             { label: "Transfers", val: totalTransfers, count: only("transfer").length, color: "#3b82f6", icon: <SwapOutlined />, sub: "Moved" },
-            { label: "Net Balance", val: Math.abs(net), count: filtered.length, color: net >= 0 ? "#6366f1" : "#ef4444", icon: net >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />, sub: net >= 0 ? "Surplus" : "Deficit" },
+            { label: "Net Balance", val: Math.abs(net), count: filtered.length, color: net >= 0 ? "#c5345d" : "#ef4444", icon: net >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />, sub: net >= 0 ? "Surplus" : "Deficit" },
           ].map(({ label, val, count, color, icon, sub }) => (
             <Col xs={12} sm={12} md={6} key={label}>
               <Card size="small" style={{ borderLeft: `3px solid ${color}` }}>
@@ -319,7 +319,7 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
             </Row>
             <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-4 text-sm">
               <span className="text-gray-500">Active: <strong>{subscriptions.filter(s => s.active).length}</strong></span>
-              <span className="text-gray-500">Est. monthly: <strong className="text-indigo-600">
+              <span className="text-gray-500">Est. monthly: <strong className="text-lotus-600">
                 ${subscriptions.filter(s => s.active).reduce((sum, s) => {
                   const amt = s.currency === "USD" ? s.amount : s.amount / 4100
                   return sum + (s.cycle === "monthly" ? amt : s.cycle === "yearly" ? amt / 12 : amt * 4.33)

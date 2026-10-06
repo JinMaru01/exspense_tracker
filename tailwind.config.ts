@@ -12,7 +12,16 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-inter)', 'system-ui', 'sans-serif']
+  		},
+  		boxShadow: {
+  			soft: '0 1px 3px rgba(46,33,27,.06), 0 1px 2px rgba(46,33,27,.04)',
+  			lotus: '0 2px 10px rgba(220,80,120,.18)'
+  		},
   		colors: {
+  			warmth: { 50: '#faf7f2', 100: '#f4ede2', 200: '#e8dbca', 300: '#d7c2a9', 400: '#c2a384', 500: '#ad8766', 600: '#9b7156', 700: '#815c48', 800: '#6a4d3f', 900: '#574136', 950: '#2e211b' },
+  			lotus: { 50: '#fdf4f6', 100: '#fce7eb', 200: '#f9d2dc', 300: '#f4adc0', 400: '#ea7c9b', 500: '#dc5078', 600: '#c5345d', 700: '#a52549', 800: '#89223e', 900: '#732138' },
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

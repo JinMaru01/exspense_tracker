@@ -254,7 +254,7 @@ export function SubscriptionManager({ subscriptions, wallets, onAdd, onUpdate, o
         <Col xs={12} sm={6}>
           <Card size="small">
             <Statistic title="Est. Monthly Cost" value={`$${monthlyTotal.toFixed(2)}`}
-              styles={{ content: { color: "#6366f1", fontSize: 15 } }} />
+              styles={{ content: { color: "#c5345d", fontSize: 15 } }} />
           </Card>
         </Col>
       </Row>
