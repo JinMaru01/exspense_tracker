@@ -166,12 +166,19 @@ export function SubscriptionManager({ subscriptions, wallets, onAdd, onUpdate, o
         <div>
           <p className="font-medium text-sm">{r.name}</p>
           <p className="text-xs text-gray-400 capitalize">{r.cycle} · {r.wallet}</p>
+          {/* phone-only: Amount/Next Due columns are hidden below antd's sm (576px) */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 min-[576px]:hidden">
+            <span className="text-sm font-semibold">{formatCurrency(r.amount, r.currency)}</span>
+            <span className="text-xs text-gray-600">{dayjs(r.nextDate).format("DD/MM/YY")}</span>
+            {r.active && <DueBadge date={r.nextDate} />}
+          </div>
         </div>
       ),
     },
     {
       title: "Amount",
       key: "amount",
+      responsive: ["sm"],
       render: (_, r) => (
         <span className="font-semibold text-sm">{formatCurrency(r.amount, r.currency)}</span>
       ),
@@ -179,6 +186,7 @@ export function SubscriptionManager({ subscriptions, wallets, onAdd, onUpdate, o
     {
       title: "Next Due",
       key: "nextDate",
+      responsive: ["sm"],
       render: (_, r) => (
         <div>
           <p className="text-xs text-gray-600 mb-1">{dayjs(r.nextDate).format("DD/MM/YYYY")}</p>
@@ -211,7 +219,6 @@ export function SubscriptionManager({ subscriptions, wallets, onAdd, onUpdate, o
     {
       title: "",
       key: "actions",
-      width: 120,
       render: (_, r) => (
         <Space size={2}>
           <Button

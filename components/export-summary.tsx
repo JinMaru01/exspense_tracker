@@ -179,7 +179,7 @@ export function ExportSummary({ expenses, wallets, subscriptions }: ExportSummar
             value={customRange as [dayjs.Dayjs, dayjs.Dayjs] | null}
             format="DD/MM/YYYY"
             onChange={(v) => { setCustomRange(v); setPreset(v ? "custom" : "all") }}
-            placeholder={["From", "To"]} allowClear />
+            placeholder={["From", "To"]} allowClear className="w-full sm:w-auto" />
           <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-gray-400">Display:</span>
             <Select size="small" value={currency} onChange={setCurrency} style={{ width: 90 }}

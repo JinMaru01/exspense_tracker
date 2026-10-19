@@ -219,7 +219,7 @@ function AppContent({ user }: { user: User }) {
             <ImportButton onImport={importExpenses} existingExpenses={expenses} />
             <IncomeForm wallets={wallets} onSubmit={addIncome} />
             <ExpenseForm wallets={wallets} onSubmit={addExpense} />
-            <Dropdown menu={userMenu} placement="bottomRight">
+            <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
               <Button type="text" className="p-0 h-auto" aria-label="Account menu">
                 <Avatar src={user.photoURL ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" /> : undefined} icon={!user.photoURL ? <UserOutlined /> : undefined}
                   size={36} className="cursor-pointer" style={{ background: "#c5345d" }} />

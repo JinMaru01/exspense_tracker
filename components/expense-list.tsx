@@ -71,6 +71,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
       dataIndex: "date",
       key: "date",
       width: 100,
+      responsive: ["sm"],
       render: (d: Date) => (
         <span className="text-xs text-gray-600 whitespace-nowrap">
           {dayjs(d).format("DD/MM/YYYY")}
@@ -83,6 +84,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
       dataIndex: "type",
       key: "type",
       width: 90,
+      responsive: ["sm"],
       render: (type: string) => (
         <Tag color={typeColor[type ?? "expense"]} className="text-xs">
           {typeLabel[type ?? "expense"]}
@@ -112,8 +114,15 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
       title: "Description",
       dataIndex: "description",
       key: "description",
-      ellipsis: true,
-      render: (d: string) => <span className="text-xs text-gray-700">{d || "—"}</span>,
+      render: (d: string, record: Expense) => (
+        <>
+          <span className="text-xs text-gray-700">{d || "—"}</span>
+          {/* phone-only line: replaces the Date/Type columns hidden below antd's sm (576px) */}
+          <p className="text-[11px] text-warmth-500 min-[576px]:hidden">
+            {dayjs(record.date).format("DD/MM/YY")} · {getCategoryIcon(record.category)} {record.category}
+          </p>
+        </>
+      ),
     },
     {
       title: "Wallet",
@@ -189,7 +198,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
           onChange={(e) => setSearch(e.target.value)}
           allowClear
         />
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Select
             value={typeFilter}
             onChange={setTypeFilter}
@@ -214,6 +223,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
             value={walletFilter}
             onChange={setWalletFilter}
             style={{ minWidth: 150 }}
+            className="col-span-2"
             options={[
               { value: "all", label: "All Wallets" },
               ...wallets.map((w) => ({ value: w.name, label: w.name })),
@@ -229,7 +239,7 @@ export function ExpenseList({ expenses, wallets, onUpdateExpense, onDeleteExpens
             value={dateRange as [dayjs.Dayjs, dayjs.Dayjs] | null}
             onChange={(v) => setDateRange(v)}
             format="DD/MM/YYYY"
-            className="flex-1"
+            className="min-w-[220px] flex-1"
           />
           {dateRange && (
             <Button size="small" icon={<ClearOutlined />} onClick={() => setDateRange(null)} />

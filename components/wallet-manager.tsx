@@ -44,10 +44,16 @@ export function WalletManager({
       title: "Wallet",
       dataIndex: "name",
       key: "name",
-      render: (name: string) => (
+      render: (name: string, record: WalletType) => (
         <span className="font-medium flex items-center gap-2">
           <WalletOutlined className="text-lotus-400" />
-          {name}
+          <span>
+            {name}
+            {/* phone-only: Currency/Balance columns are hidden below antd's sm (576px) */}
+            <span className={`block text-xs font-semibold min-[576px]:hidden ${record.balance < 0 ? "text-red-500" : "text-green-600"}`}>
+              {formatCurrency(record.balance, record.currency)}
+            </span>
+          </span>
         </span>
       ),
     },
@@ -62,6 +68,7 @@ export function WalletManager({
       title: "Currency",
       dataIndex: "currency",
       key: "currency",
+      responsive: ["sm"],
       render: (cur: string) => <Tag color="blue">{cur}</Tag>,
     },
     {
@@ -80,6 +87,7 @@ export function WalletManager({
     {
       title: "Balance",
       key: "balance",
+      responsive: ["sm"],
       render: (_: unknown, record: WalletType) => {
         const neg = record.balance < 0
         return (
