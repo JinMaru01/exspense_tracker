@@ -40,8 +40,8 @@ export function BalanceAdjustment({ wallet, onAdjustBalance }: BalanceAdjustment
 
   return (
     <>
-      <Button size="small" icon={<DollarOutlined />} onClick={() => setOpen(true)}>
-        Adjust
+      <Button size="small" icon={<DollarOutlined />} onClick={() => setOpen(true)} aria-label="Adjust balance">
+        <span className="max-[575px]:hidden">Adjust</span>
       </Button>
 
       <Modal

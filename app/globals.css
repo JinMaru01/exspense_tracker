@@ -45,9 +45,6 @@ body {
   .ant-modal { max-width: calc(100vw - 16px) !important; margin: 8px auto !important; }
   .ant-modal-content { border-radius: 12px !important; }
 
-  /* Date range picker: stack vertically */
-  .ant-picker-range { flex-direction: column; height: auto !important; }
-
   /* Select dropdowns: prevent overflow */
   .ant-select-dropdown { max-width: calc(100vw - 32px) !important; }
 }

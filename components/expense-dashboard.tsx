@@ -102,6 +102,7 @@ export function ExpenseDashboard({ expenses }: ExpenseDashboardProps) {
           }}
           placeholder={["From", "To"]}
           allowClear
+          className="w-full sm:w-auto"
         />
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-400">Display:</span>
