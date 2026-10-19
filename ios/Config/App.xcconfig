@@ -1,0 +1,39 @@
+// Build settings for the ExpenseTracker app target.
+// Personal values (bundle ID, signing team, Google client ID) go in Local.xcconfig,
+// which is git-ignored — copy Local.example.xcconfig to get started.
+
+PRODUCT_NAME = $(TARGET_NAME)
+PRODUCT_BUNDLE_IDENTIFIER = com.example.expensetracker
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+TARGETED_DEVICE_FAMILY = 1,2
+SWIFT_VERSION = 5.0
+SWIFT_EMIT_LOC_STRINGS = YES
+ENABLE_PREVIEWS = YES
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
+// Firebase's Objective-C categories need -ObjC when linked statically.
+OTHER_LDFLAGS = $(inherited) -ObjC
+
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM =
+
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor
+
+// Info.plist: generated keys merged with Config/Info.plist (which holds the Google URL scheme).
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_FILE = Config/Info.plist
+INFOPLIST_KEY_CFBundleDisplayName = Expenses
+INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.finance
+INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES
+INFOPLIST_KEY_UILaunchScreen_Generation = YES
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+
+// REVERSED_CLIENT_ID from GoogleService-Info.plist; registered as a URL scheme so the
+// Google sign-in flow can return to the app. Set it in Local.xcconfig.
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.not-configured
+
+#include? "Local.xcconfig"

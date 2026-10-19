@@ -1,0 +1,41 @@
+name: iOS app
+
+on:
+  push:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Test ExpenseTrackerKit
+        working-directory: ios/ExpenseTrackerKit
+        run: swift test
+
+      # No GoogleService-Info.plist or signing in CI: this checks that the app compiles.
+      - name: Build app for the iOS Simulator
+        working-directory: ios
+        run: |
+          xcodebuild build \
+            -project ExpenseTracker.xcodeproj \
+            -scheme ExpenseTracker \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO

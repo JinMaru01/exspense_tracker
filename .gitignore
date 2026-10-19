@@ -27,3 +27,12 @@ yarn-error.log*
 next-env.d.ts
 
 /telegram-bot
+
+# iOS app (ios/)
+ios/Config/Local.xcconfig
+ios/ExpenseTracker/GoogleService-Info.plist
+xcuserdata/
+*.xcuserstate
+DerivedData/
+ios/ExpenseTrackerKit/.build/
+ios/ExpenseTrackerKit/.swiftpm/
